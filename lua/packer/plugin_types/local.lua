@@ -36,7 +36,7 @@ M.installer = a.sync(function(plugin, disp)
    local from = uv.fs_realpath(util.strip_trailing_sep(plugin.url))
    local to = util.strip_trailing_sep(plugin.install_path)
 
-   disp:task_update(plugin.full_name, 'making symlink...')
+   disp:task_update(plugin.name, 'making symlink...')
    local err, success = symlink(from, to, { dir = true })
    if not success then
       plugin.err = { err }
@@ -57,7 +57,7 @@ M.updater = a.sync(function(plugin, disp)
 
    sleep(200)
 
-   disp:task_update(plugin.full_name, 'checking symlink...')
+   disp:task_update(plugin.name, 'checking symlink...')
 
    sleep(200)
 
@@ -68,7 +68,7 @@ M.updater = a.sync(function(plugin, disp)
    end
 
    if uv.fs_realpath(to) ~= from then
-      disp:task_update(plugin.full_name, string.format('updating symlink from %s to %s', from, to))
+      disp:task_update(plugin.name, string.format('updating symlink from %s to %s', from, to))
       local err, success = unlink(to)
       if err then
          log.fmt_debug('%s: failed to unlink %s: %s', plugin.name, to, err)

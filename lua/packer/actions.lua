@@ -117,7 +117,7 @@ local post_update_hook = a.sync(function(plugin, disp)
       return
    end
 
-   disp:task_update(plugin.full_name, 'running post update hooks...')
+   disp:task_update(plugin.name, 'running post update hooks...')
 
    for _, run_task in ipairs(plugin.run) do
       if type(run_task) == "function" then
@@ -141,7 +141,7 @@ local post_update_hook = a.sync(function(plugin, disp)
 end, 2)
 
 local install_task = a.sync(function(plugin, disp, installs)
-   disp:task_start(plugin.full_name, 'installing...')
+   disp:task_start(plugin.name, 'installing...')
 
    local plugin_type = require('packer.plugin_types')[plugin.type]
 
@@ -156,11 +156,11 @@ local install_task = a.sync(function(plugin, disp, installs)
    end
 
    if not err then
-      disp:task_succeeded(plugin.full_name, 'installed')
-      log.fmt_debug('Installed %s', plugin.full_name)
+      disp:task_succeeded(plugin.name, 'installed')
+      log.fmt_debug('Installed %s', plugin.name)
    else
-      disp:task_failed(plugin.full_name, 'failed to install', err)
-      log.fmt_debug('Failed to install %s: %s', plugin.full_name, vim.inspect(err))
+      disp:task_failed(plugin.name, 'failed to install', err)
+      log.fmt_debug('Failed to install %s: %s', plugin.name, vim.inspect(err))
    end
 
    installs[plugin.name] = { err = err }
@@ -214,10 +214,10 @@ local function move_plugin(plugin, moves, fs_state)
 end
 
 local update_task = a.sync(function(plugin, disp, updates, opts)
-   disp:task_start(plugin.full_name, 'updating...')
+   disp:task_start(plugin.name, 'updating...')
 
    if plugin.lock then
-      disp:task_succeeded(plugin.full_name, 'locked')
+      disp:task_succeeded(plugin.name, 'locked')
       return
    end
 
@@ -229,14 +229,14 @@ local update_task = a.sync(function(plugin, disp, updates, opts)
       local revs = plugin.revs
       actual_update = revs[1] ~= revs[2]
       if actual_update then
-         log.fmt_debug('Updated %s', plugin.full_name)
+         log.fmt_debug('Updated %s', plugin.name)
          plugin.err = post_update_hook(plugin, disp)
       end
    end
 
    if plugin.err then
-      disp:task_failed(plugin.full_name, 'failed to update', plugin.err)
-      log.fmt_debug('Failed to update %s: %s', plugin.full_name, table.concat(plugin.err, '\n'))
+      disp:task_failed(plugin.name, 'failed to update', plugin.err)
+      log.fmt_debug('Failed to update %s: %s', plugin.name, table.concat(plugin.err, '\n'))
    elseif actual_update then
       local info = {}
       local ncommits = 0
@@ -253,9 +253,9 @@ local update_task = a.sync(function(plugin, disp, updates, opts)
       end
 
       local msg = fmt('updated: %d new commits', ncommits)
-      disp:task_succeeded(plugin.full_name, msg, info)
+      disp:task_succeeded(plugin.name, msg, info)
    else
-      disp:task_done(plugin.full_name, 'already up to date')
+      disp:task_done(plugin.name, 'already up to date')
    end
 
    updates[plugin.name] = { err = plugin.err }

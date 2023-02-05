@@ -43,7 +43,6 @@ local record M
     requires     : {string}
 
     name         : string
-    full_name    : string -- Includes rev and branch
     revs         : {string, string}
     required_by  : {string}
 
@@ -103,19 +102,6 @@ local function get_plugin_name(text: string): string, string
     segment_idx = segment_idx - 1
   end
   return name, path
-end
-
-local function get_plugin_full_name(name: string, user: M.UserSpec): string
-  if user.branch then
-    -- NOTE: maybe have to change the seperator here too
-    name = name .. '/' .. user.branch
-  end
-
-  if user.rev then
-    name = name .. '@' .. user.rev
-  end
-
-  return name
 end
 
 local function remove_ending_git_url(url: string): string
@@ -207,7 +193,6 @@ function M.process_spec(
 
   local plugin: M.Plugin = {
     name        = name,
-    full_name   = get_plugin_full_name(name, spec),
     branch      = spec.branch,
     rev         = spec.rev,
     tag         = spec.tag,

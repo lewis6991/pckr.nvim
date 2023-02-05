@@ -75,7 +75,6 @@ local M = {UserSpec = {}, Plugin = {}, }
 
 
 
-
 M.plugins = {}
 
 local function guess_plugin_type(path)
@@ -103,19 +102,6 @@ local function get_plugin_name(text)
       segment_idx = segment_idx - 1
    end
    return name, path
-end
-
-local function get_plugin_full_name(name, user)
-   if user.branch then
-
-      name = name .. '/' .. user.branch
-   end
-
-   if user.rev then
-      name = name .. '@' .. user.rev
-   end
-
-   return name
 end
 
 local function remove_ending_git_url(url)
@@ -207,7 +193,6 @@ function M.process_spec(
 
    local plugin = {
       name = name,
-      full_name = get_plugin_full_name(name, spec),
       branch = spec.branch,
       rev = spec.rev,
       tag = spec.tag,

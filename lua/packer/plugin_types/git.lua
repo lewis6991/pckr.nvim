@@ -271,7 +271,7 @@ end
 local function checkout(plugin, disp)
    local function update_disp(msg, info)
       if disp then
-         disp:task_update(plugin.full_name, msg, info)
+         disp:task_update(plugin.name, msg, info)
       end
    end
 
@@ -335,7 +335,7 @@ end
 
 local function clone(plugin, disp, timeout)
    local function task_update(info)
-      disp:task_update(plugin.full_name, 'cloning...', info)
+      disp:task_update(plugin.name, 'cloning...', info)
    end
 
    task_update()
@@ -399,12 +399,12 @@ end
 
 local function update(plugin, disp)
 
-   disp:task_update(plugin.full_name, 'checking current commit...')
+   disp:task_update(plugin.name, 'checking current commit...')
 
    plugin.revs[1] = get_head(plugin.install_path)
 
    local function fetch_update(info)
-      disp:task_update(plugin.full_name, 'fetching updates...', info)
+      disp:task_update(plugin.name, 'fetching updates...', info)
    end
 
    fetch_update()
@@ -424,7 +424,7 @@ local function update(plugin, disp)
       return false, out
    end
 
-   disp:task_update(plugin.full_name, 'pulling updates...')
+   disp:task_update(plugin.name, 'pulling updates...')
    ok, out = checkout(plugin, disp)
 
    if not ok then
@@ -435,7 +435,7 @@ local function update(plugin, disp)
    plugin.revs[2] = get_head(plugin.install_path)
 
    if plugin.revs[1] ~= plugin.revs[2] then
-      disp:task_update(plugin.full_name, 'getting commit messages...')
+      disp:task_update(plugin.name, 'getting commit messages...')
       ok, out = git_run({
          'log',
          '--color=never',
@@ -503,17 +503,17 @@ M.revert_last = async(function(plugin)
    })
 
    if not ok then
-      log.fmt_error('Reverting update for %s failed!', plugin.full_name)
+      log.fmt_error('Reverting update for %s failed!', plugin.name)
       return out
    end
 
    ok, out = checkout(plugin)
    if not ok then
-      log.fmt_error('Reverting update for %s failed!', plugin.full_name)
+      log.fmt_error('Reverting update for %s failed!', plugin.name)
       return out
    end
 
-   log.fmt_info('Reverted update for %s', plugin.full_name)
+   log.fmt_info('Reverted update for %s', plugin.name)
 end, 1)
 
 

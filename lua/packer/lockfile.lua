@@ -84,15 +84,15 @@ M.lock = a.sync(function()
 end)
 
 local restore_plugin = a.sync(function(plugin, disp, commit)
-   disp:task_start(plugin.full_name, fmt('restoring to %s', commit))
+   disp:task_start(plugin.name, fmt('restoring to %s', commit))
 
    if plugin.type == 'local' then
-      disp:task_done(plugin.full_name, 'local plugin')
+      disp:task_done(plugin.name, 'local plugin')
       return
    end
 
    if not commit then
-      disp:task_failed(plugin.full_name, 'could not find plugin in lockfile')
+      disp:task_failed(plugin.name, 'could not find plugin in lockfile')
       return
    end
 
@@ -100,17 +100,17 @@ local restore_plugin = a.sync(function(plugin, disp, commit)
 
    local rev = plugin_type.get_rev(plugin)
    if commit == rev then
-      disp:task_done(plugin.full_name, fmt('already at commit %s', commit))
+      disp:task_done(plugin.name, fmt('already at commit %s', commit))
       return
    end
 
    plugin.err = plugin_type.revert_to(plugin, commit)
    if plugin.err then
-      disp:task_failed(plugin.full_name, fmt('failed to restore to commit %s', commit))
+      disp:task_failed(plugin.name, fmt('failed to restore to commit %s', commit))
       return
    end
 
-   disp:task_succeeded(plugin.full_name, fmt('restored to commit %s', commit))
+   disp:task_succeeded(plugin.name, fmt('restored to commit %s', commit))
 end, 3)
 
 

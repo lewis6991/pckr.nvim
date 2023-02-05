@@ -582,7 +582,9 @@ display.finish = vim.schedule_wrap(function(self, time)
 
    for plugin_name, _ in pairs(self.items) do
       local plugin = packer_plugins[plugin_name]
-      if plugin.breaking_commits and #plugin.breaking_commits > 0 then
+      if not plugin then
+         log.fmt_warn('%s is not in packer_plugins', plugin_name)
+      elseif plugin.breaking_commits and #plugin.breaking_commits > 0 then
          vim.cmd('syntax match packerBreakingChange "' .. plugin_name .. '" containedin=packerStatusSuccess')
          for _, commit_hash in ipairs(plugin.breaking_commits) do
             log.fmt_warn('Potential breaking change in commit %s of %s', commit_hash, plugin_name)
