@@ -82,7 +82,7 @@ local function git_run(args, opts)
    if ok then
       return true, jr.stdout
    end
-   return true, jr.stderr
+   return false, jr.stderr
 end
 
 local git_version
