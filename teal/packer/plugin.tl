@@ -64,6 +64,7 @@ local record M
     start: boolean
 
     loaded: boolean
+    config_time: number
 
     -- Built from a simple plugin spec (a string)
     simple: boolean

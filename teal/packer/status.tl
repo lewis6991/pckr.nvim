@@ -97,6 +97,10 @@ local function load_state(plugin: Plugin): string
     return ' (manually loaded)'
   end
 
+  if plugin.config_time then
+    return string.format(' (config took %.3fms)', plugin.config_time)
+  end
+
   return ''
 end
 

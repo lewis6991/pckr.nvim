@@ -21,6 +21,7 @@ local function apply_config(plugin, pre)
          end
          local delta = util.measure(c0)
          log.fmt_debug('config%s for %s took %fms', sfx, plugin.name, delta * 1000)
+         plugin.config_time = delta * 1000
       end
    end, function(x)
       log.fmt_error('Error running config for %s: %s', plugin.name, x)
