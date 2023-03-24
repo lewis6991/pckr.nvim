@@ -58,8 +58,7 @@ local function format_values(key: string, value: any): string|{string}
     return fmt('<Lua: %s:%s>', info.short_src, info.linedefined)
   end
 
-  local s = vim.inspect(value):gsub('\n', ', ')
-  return s
+  return vim.inspect(value)
 end
 
 local plugin_keys_exclude: {string:boolean} = {
@@ -67,6 +66,22 @@ local plugin_keys_exclude: {string:boolean} = {
   name = true,
   simple = true,
 }
+
+local function add_profile_data(plugin: Plugin): number
+  local total_time = plugin.config_time or 0
+
+  local path_times = require'packer.loader'.path_times
+  for p, d in pairs(path_times) do
+    if vim.startswith(p, plugin.install_path) then
+      plugin.plugin_times = plugin.plugin_times or {}
+      plugin.plugin_times[p] = d
+      total_time = total_time + d[1] + d[2]
+    end
+  end
+
+  plugin.plugin_time = total_time
+  return total_time
+end
 
 local function get_plugin_status(plugin: Plugin): {string}
   local config_lines = {}
@@ -97,10 +112,6 @@ local function load_state(plugin: Plugin): string
     return ' (manually loaded)'
   end
 
-  if plugin.config_time then
-    return string.format(' (config took %.3fms)', plugin.config_time)
-  end
-
   return ''
 end
 
@@ -115,12 +126,16 @@ M.run = a.sync(function()
 
   disp:update_headline_message(fmt('Total plugins: %d', vim.tbl_count(plugins)))
 
-  for plugin_name, _ in pairs(plugins) do
+  local total_time: number = 0
+  for plugin_name, plugin in pairs(plugins) do
     local item = disp.items[plugin_name]
-    local plugin = plugins[plugin_name]
     item.expanded = false
-    disp:task_done(plugin_name, load_state(plugin), get_plugin_status(plugin))
+    total_time = total_time + add_profile_data(plugin)
+    local state = load_state(plugin)..string.format(' (%.2fms)', plugin.plugin_time)
+    disp:task_done(plugin_name, state, get_plugin_status(plugin))
   end
+
+  disp:update_headline_message(fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins), total_time))
 end)
 
 return M

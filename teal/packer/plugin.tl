@@ -64,7 +64,11 @@ local record M
     start: boolean
 
     loaded: boolean
+
+    -- Profiling
     config_time: number
+    plugin_times: {string:{number,number}}
+    plugin_time: number
 
     -- Built from a simple plugin spec (a string)
     simple: boolean

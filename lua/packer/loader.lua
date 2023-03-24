@@ -66,6 +66,27 @@ local M = {}
 
 
 
+
+local orig_loadfile = loadfile
+
+M.path_times = {}
+
+_G.loadfile = function(path)
+   local start1 = vim.loop.hrtime()
+   local chunk, err = orig_loadfile(path)
+   local load_time = (vim.loop.hrtime() - start1) / 1000000
+   if chunk then
+      return function(...)
+         local start2 = vim.loop.hrtime()
+         local r = { chunk(...) }
+         local exec_time = (vim.loop.hrtime() - start2) / 1000000
+         M.path_times[path] = { load_time, exec_time }
+         return unpack(r, 1, (table).maxn(r))
+      end
+   end
+   return nil, err
+end
+
 local function load_plugins(plugins)
    for _, plugin in ipairs(plugins) do
       M.load_plugin(plugin)
