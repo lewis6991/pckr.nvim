@@ -64,6 +64,7 @@ local M = {Display = {Item = {}, Callbacks = {}, }, }
 
 
 
+
 local HEADER_LINES = 2
 local TITLE = 'packer.nvim'
 
@@ -259,7 +260,7 @@ local function pad(x)
    return r
 end
 
-local function render_task(self, plugin, static)
+local function render_task(self, plugin, static, top)
    local item = self.items[plugin]
 
    local icon
@@ -280,7 +281,9 @@ local function render_task(self, plugin, static)
    end
 
    local pos
-   if not static then
+   if top then
+      pos = 'top'
+   elseif not static then
       pos = (item.status == 'success' or item.status == 'failed') and 'top' or nil
    end
 
@@ -467,7 +470,7 @@ display.task_start = vim.schedule_wrap(function(self, plugin, message)
    item.status = 'running'
    item.message = message
 
-   render_task(self, plugin)
+   render_task(self, plugin, nil, true)
 end)
 
 
@@ -526,6 +529,19 @@ local task_done = vim.schedule_wrap(function(self, plugin, message, info, succes
    render_task(self, plugin)
    decrement_headline_count(self)
 end)
+
+function display:task_sort(f)
+   if not valid_display(self) then
+      return
+   end
+
+   local names = vim.tbl_keys(self.items)
+   table.sort(names, f)
+
+   for i = #names, 1, -1 do
+      render_task(self, names[i], nil, true)
+   end
+end
 
 
 function display:task_done(plugin, message, info)

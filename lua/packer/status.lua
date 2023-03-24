@@ -127,13 +127,20 @@ M.run = a.sync(function()
    disp:update_headline_message(fmt('Total plugins: %d', vim.tbl_count(plugins)))
 
    local total_time = 0
+
    for plugin_name, plugin in pairs(plugins) do
       local item = disp.items[plugin_name]
       item.expanded = false
-      total_time = total_time + add_profile_data(plugin)
+      local plugin_time = add_profile_data(plugin)
+      total_time = total_time + plugin_time
+
       local state = load_state(plugin) .. string.format(' (%.2fms)', plugin.plugin_time)
       disp:task_done(plugin_name, state, get_plugin_status(plugin))
    end
+
+   disp:task_sort(function(k1, k2)
+      return plugins[k1].plugin_time > plugins[k2].plugin_time
+   end)
 
    disp:update_headline_message(fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins), total_time))
 end)

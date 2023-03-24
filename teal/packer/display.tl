@@ -49,6 +49,7 @@ local record M
     task_succeeded          : function(Display, plugin: string, msg: string, info: {string})
     task_done               : function(Display, plugin: string, msg: string, info: {string})
     task_failed             : function(Display, plugin: string, msg: string, info: {string})
+    task_sort               : function(Display, (function(p1: string, p2: string): boolean))
     update_headline_message : function(Display, string)
     finish                  : function(Display, number)
     ask_user                : function(string, {string}): boolean
@@ -259,7 +260,7 @@ local function pad(x: {string}): {string}
   return r
 end
 
-local function render_task(self: Display, plugin: string, static: boolean)
+local function render_task(self: Display, plugin: string, static: boolean, top: boolean)
   local item = self.items[plugin]
 
   local icon: string
@@ -280,7 +281,9 @@ local function render_task(self: Display, plugin: string, static: boolean)
   end
 
   local pos: TaskPos
-  if not static then
+  if top then
+    pos = 'top'
+  elseif not static then
     pos = (item.status == 'success' or item.status == 'failed') and 'top' or nil
   end
 
@@ -467,7 +470,7 @@ display.task_start = vim.schedule_wrap(function(self: Display, plugin: string, m
   item.status = 'running'
   item.message = message
 
-  render_task(self, plugin)
+  render_task(self, plugin, nil, true)
 end)
 
 --- Decrement the count of active operations in the headline
@@ -526,6 +529,19 @@ local task_done = vim.schedule_wrap(function(self: Display, plugin: string, mess
   render_task(self, plugin)
   decrement_headline_count(self)
 end)
+
+function display:task_sort(f: (function(p1: string, p2: string): boolean))
+  if not valid_display(self) then
+    return
+  end
+
+  local names = vim.tbl_keys(self.items)
+  table.sort(names, f)
+
+  for i = #names, 1, -1 do
+    render_task(self, names[i], nil, true)
+  end
+end
 
 --- Update a task as having passively completed
 function display:task_done(plugin: string, message: string, info: {string})
