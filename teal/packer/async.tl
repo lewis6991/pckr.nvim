@@ -78,7 +78,7 @@ function M.sync(func: function, nargs: integer): function
     if co.running() then
       return func(...)
     end
-    local callback = select(nargs+1, ...)
+    local callback = select(nargs+1, ...) as function
     execute(func, callback, unpack({...}, 1, nargs))
   end
 end

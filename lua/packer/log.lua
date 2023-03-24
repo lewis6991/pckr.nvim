@@ -83,7 +83,7 @@ local function stringify(...)
    for i = 1, select('#', ...) do
       local x = select(i, ...)
 
-      if type(x) == 'number' then
+      if type(x) == "number" then
          x = tostring(round(x, FLOAT_PRECISION))
       elseif type(x) ~= 'string' then
          x = vim.inspect(x)

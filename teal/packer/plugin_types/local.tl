@@ -30,7 +30,7 @@ else
 end
 
 local symlink = a.wrap(symlink_fn, 4)
-local unlink = a.wrap(uv.fs_unlink, 2)
+local unlink = a.wrap(uv.fs_unlink, 2) as function(string): string, string
 
 M.installer = a.sync(function(plugin: Plugin, disp: Display): {string}
   local from = uv.fs_realpath(util.strip_trailing_sep(plugin.url))
@@ -72,7 +72,7 @@ M.updater = a.sync(function(plugin: Plugin, disp: Display): {string}
     local err, success = unlink(to)
     if err then
       log.fmt_debug('%s: failed to unlink %s: %s', plugin.name, to, err)
-      return err
+      return { err }
     end
     assert(success)
     log.fmt_debug('%s: did unlink', plugin.name)

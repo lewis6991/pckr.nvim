@@ -72,7 +72,7 @@ M.updater = a.sync(function(plugin, disp)
       local err, success = unlink(to)
       if err then
          log.fmt_debug('%s: failed to unlink %s: %s', plugin.name, to, err)
-         return err
+         return { err }
       end
       assert(success)
       log.fmt_debug('%s: did unlink', plugin.name)

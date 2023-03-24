@@ -72,7 +72,7 @@ local FLOAT_PRECISION = 0.01
 
 local level_ids = { trace = 1, debug = 2, info = 3, warn = 4, error = 5, fatal = 6 }
 
-local function round(x: number, increment: integer): number
+local function round(x: number, increment: number): number
   increment = increment or 1
   x = x / increment
   return (x > 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)) * increment
@@ -81,15 +81,15 @@ end
 local function stringify(...): {string}
   local t: {string} = {}
   for i = 1, select('#', ...) do
-    local x = select(i, ...)
+    local x = select(i, ...) as any
 
-    if type(x) == 'number' then
+    if x is number then
       x = tostring(round(x, FLOAT_PRECISION))
     elseif type(x) ~= 'string' then
       x = vim.inspect(x)
     end
 
-    t[#t + 1] = x
+    t[#t + 1] = x as string
   end
   return t
 end

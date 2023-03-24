@@ -102,7 +102,7 @@ local find_dirty_plugins = a.sync(function(
   for plugin_name, plugin in pairs(plugins) do
     local plugin_installed = false
     for _, name in pairs(plugin.start and start_plugins or opt_plugins) do
-      if name == plugin_name then
+      if name as string == plugin_name then
         plugin_installed = true
         break
       end
