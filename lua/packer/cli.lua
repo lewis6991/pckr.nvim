@@ -2,13 +2,16 @@ local log = require('packer.log')
 
 local M = {}
 
+--- @return string[]
 local function command_complete()
    local actions = require('packer.actions')
    return vim.tbl_keys(actions)
 end
 
-
-
+-- Completion user plugins
+-- Intended to provide completion for PackerUpdate/Sync/Install command
+--- @param lead string
+--- @return string[]
 local function plugin_complete(lead, _)
    local plugins = require('packer.plugin').plugins
    local completion_list = vim.tbl_filter(function(name)
@@ -18,6 +21,9 @@ local function plugin_complete(lead, _)
    return completion_list
 end
 
+--- @param arglead string
+--- @param line string
+--- @return string[]
 function M.complete(arglead, line)
    local words = vim.split(line, '%s+')
    local n = #words
@@ -32,6 +38,7 @@ function M.complete(arglead, line)
 end
 
 function M.run(params)
+   --- @type string
    local func = params.fargs[1]
 
    if not func then
@@ -40,6 +47,7 @@ function M.run(params)
 
    local actions = require('packer.actions')
 
+   --- @type function?
    local cmd_func = actions[func]
    if cmd_func then
       cmd_func()

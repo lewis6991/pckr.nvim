@@ -6,7 +6,6 @@ Differences:
 - heavily refactored
 - lockfile support
 - no compilation
-- re-written in Teal
 
 ## Table of Contents
 1. [Features](#features)

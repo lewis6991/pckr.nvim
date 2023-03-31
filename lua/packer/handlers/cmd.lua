@@ -1,9 +1,10 @@
-local Plugin = require('packer.plugin').Plugin
-
+--- @type table<string,Plugin[]>
 local command_plugins = {}
 
+--- @param plugins table<string,Plugin>
+--- @param loader fun(plugins: Plugin[])
 return function(plugins, loader)
-   local new_commands = {}
+   local new_commands = {} --- @type string[]
    for _, plugin in pairs(plugins) do
       if plugin.cmd then
          for _, cmd in ipairs(plugin.cmd) do

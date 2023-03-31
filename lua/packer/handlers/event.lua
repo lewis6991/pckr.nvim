@@ -1,9 +1,10 @@
-local Plugin = require('packer.plugin').Plugin
-
+--- @type table<string,Plugin[]>
 local event_plugins = {}
 
+--- @param plugins table<string,Plugin>
+--- @param loader fun(plugins: Plugin[])
 return function(plugins, loader)
-   local new_events = {}
+   local new_events = {} --- @type string[]
    for _, plugin in pairs(plugins) do
       if plugin.event then
          for _, event in ipairs(plugin.event) do
@@ -18,11 +19,13 @@ return function(plugins, loader)
    end
 
    for _, event in ipairs(new_events) do
+      --- @param e Plugin
+      --- @type string[]
       local names = vim.tbl_map(function(e)
          return e.name
       end, event_plugins[event])
 
-
+      -- Handle 'User Foo' events
       local ev, pattern = unpack(vim.split(event, '%s+'))
       vim.api.nvim_create_autocmd(ev, {
          pattern = pattern,
@@ -30,8 +33,8 @@ return function(plugins, loader)
          desc = 'packer.nvim lazy load: ' .. table.concat(names, ', '),
          callback = function()
             loader(event_plugins[event])
-
-
+            -- TODO(lewis6991): should we re-issue the event? (#1163)
+            -- vim.api.nvim_exec_autocmds(event, { modeline = false })
          end,
       })
    end

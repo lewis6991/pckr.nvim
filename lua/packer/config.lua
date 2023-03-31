@@ -2,55 +2,52 @@ local util = require('packer.util')
 
 local join_paths = util.join_paths
 
+--- @class Display
+--- @field non_interactive boolean
+--- @field prompt_border   string
+--- @field working_sym     string
+--- @field error_sym       string
+--- @field done_sym        string
+--- @field removed_sym     string
+--- @field moved_sym       string
+--- @field item_sym        string
+--- @field header_sym      string
+--- @field keybindings     table<string,(string|string[])>
 
+--- @class Git
+--- @field cmd                string
+--- @field depth              integer
+--- @field clone_timeout      integer
+--- @field default_url_format string
 
+--- @alias LogLevel
+--- | 'trace'
+--- | 'debug'
+--- | 'info'
+--- | 'warn'
+--- | 'error'
+--- | 'fatal'
 
+--- @class Log
+--- @field level LogLevel
 
+--- @class Lockfile
+--- @field path string
 
+--- @class Config
+--- @field package_root string
+--- @field pack_dir     string
+--- @field max_jobs     integer?
+--- @field start_dir    string
+--- @field opt_dir      string
+--- @field auto_clean   boolean
+--- @field autoremove   boolean
+--- @field display      Display
+--- @field git          Git
+--- @field log          Log
+--- @field lockfile     Lockfile
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+--- @type Config
 local default_config = {
    package_root = join_paths(vim.fn.stdpath('data'), 'site', 'pack'),
    max_jobs = nil,
@@ -87,6 +84,8 @@ local default_config = {
 
 local config = vim.deepcopy(default_config)
 
+--- @param user_config Config
+--- @return Config
 local function set(_, user_config)
    config = vim.tbl_deep_extend('force', config, user_config or {})
    config.package_root = vim.fn.fnamemodify(config.package_root, ':p')
@@ -102,6 +101,7 @@ local function set(_, user_config)
    return config
 end
 
+--- @type Config
 local M = {}
 
 setmetatable(M, {

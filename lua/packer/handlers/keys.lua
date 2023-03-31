@@ -1,8 +1,10 @@
-local Plugin = require('packer.plugin').Plugin
-
+--- @type table<{[1]:string,[2]:string},Plugin[]>
 local keymap_plugins = {}
 
+--- @param plugins table<string,Plugin>
+--- @param loader fun(plugins: Plugin[])
 return function(plugins, loader)
+   --- @type {[1]:string,[2]:string}[]
    local new_keymaps = {}
    for _, plugin in pairs(plugins) do
       if plugin.keys then
@@ -19,6 +21,8 @@ return function(plugins, loader)
 
    for _, keymap in ipairs(new_keymaps) do
       local kplugins = keymap_plugins[keymap]
+      ---@param e Plugin
+      ---@type string[]
       local names = vim.tbl_map(function(e)
          return e.name
       end, kplugins)

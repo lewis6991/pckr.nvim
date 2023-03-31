@@ -2,88 +2,83 @@ local util = require('packer.util')
 local log = require('packer.log')
 local config = require('packer.config')
 
-local M = {UserSpec = {}, Plugin = {}, }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-M.plugins = {}
-
+--- @class UserSpec
+--- @field [integer] string
+--- @field branch     string
+--- @field rev        string
+--- @field tag        string
+--- @field commit     string
+--- @field lazy       boolean
+--- @field start      boolean
+--- @field keys       string|string[]|{[1]:string, [2]:string}[]
+--- @field event      string|string[]
+--- @field ft         string|string[]
+--- @field cmd        string|string[]
+--- @field cond       boolean|Loader|Loader[]
+--- @field run        string|function|(string|function)[]
+--- @field config_pre string|function()
+--- @field config     string|function()
+--- @field lock       boolean
+--- @field requires   string|(string|UserSpec)[]
+
+--- @class Plugin
+--- @field branch       string
+--- @field rev          string
+--- @field tag          string
+--- @field commit       string
+--- @field install_path string
+--- @field keys         {[1]:string,[2]:string}[]
+--- @field event        string[]
+--- @field ft           string[]
+--- @field cmd          string[]
+--- @field cond         boolean|Loader|Loader[]
+--- @field run          (string|fun())[]
+--- @field config_pre   string|fun()
+--- @field config       string|fun()
+--- @field requires     string[]
+---
+--- @field name         string
+--- @field revs         {[1]: string, [2]: string}
+--- @field required_by  string[]
+---
+--- @field type             PluginType
+--- @field url              string
+--- @field lock             boolean
+--- @field breaking_commits string[]
+---
+--- Lazy loaded
+--- @field lazy  boolean
+---
+--- Install as a 'start' plugin
+--- @field start  boolean
+--- @field loaded  boolean
+---
+--- Profiling
+--- @field config_time       number
+--- @field plugin_times      table<string,{[1]:number,[2]:number}>
+--- @field plugin_load_time  number
+--- @field plugin_exec_time  number
+--- @field plugin_time       number
+---
+--- -- Built from a simple plugin spec (a string)
+--- @field simple boolean
+---
+--- @field messages string[]
+--- @field err? string[]
+
+--- @alias PluginType
+--- | 'git'
+--- | 'local'
+--- | 'unknown'
+
+local M = {
+  --- @type table<string,Plugin>
+  plugins = {}
+}
+
+
+--- @param path string
+--- @return string, PluginType
 local function guess_plugin_type(path)
    if vim.fn.isdirectory(path) ~= 0 then
       return path, 'local'
@@ -99,6 +94,8 @@ local function guess_plugin_type(path)
    return config.git.default_url_format:format(path), 'git'
 end
 
+--- @param text string
+--- @return string, string
 local function get_plugin_name(text)
    local path = vim.fn.expand(text)
    local name_segments = vim.split(path, util.get_separator())
@@ -111,14 +108,20 @@ local function get_plugin_name(text)
    return name, path
 end
 
+--- @param url string
+--- @return string
 local function remove_ending_git_url(url)
    return vim.endswith(url, '.git') and url:sub(1, -5) or url
 end
 
+--- @param x string | UserSpec
+--- @return UserSpec
 local function normspec(x)
    return type(x) == "string" and { x } or x
 end
 
+--- @param x string | string[]
+--- @return string[]
 local function normcond(x)
    if type(x) == "string" then
       return { x }
@@ -126,6 +129,8 @@ local function normcond(x)
    return x
 end
 
+--- @param x string | (string|{[1]:string,[2]:string})[]
+--- @return {[1]:string,[2]:string}[]
 local function normkeys(x)
    if type(x) == 'string' then
       return { { '', x } }
@@ -139,6 +144,8 @@ local function normkeys(x)
    end
 end
 
+--- @param x string | function | (string|function)[]
+--- @return (string|function)[]
 local function normrun(x)
    if type(x) == "function" or type(x) == "string" then
       return { x }
@@ -146,13 +153,13 @@ local function normrun(x)
    return x
 end
 
-
-
-
-function M.process_spec(
-   spec0,
-   required_by)
-
+--- The main logic for adding a plugin (and any dependencies) to the managed set
+-- Can be invoked with (1) a single plugin spec as a string, (2) a single plugin spec table, or (3)
+-- a list of plugin specs
+--- @param spec0 string|UserSpec
+--- @param required_by? Plugin
+--- @return table<string,Plugin>
+function M.process_spec(spec0, required_by)
    local spec = normspec(spec0)
 
    if #spec > 1 then
@@ -211,7 +218,7 @@ function M.process_spec(
       event = normcond(spec.event),
       ft = normcond(spec.ft),
       cmd = normcond(spec.cmd),
-      cond = spec.cond ~= true and spec.cond or nil,
+      cond = spec.cond ~= true and spec.cond or nil,   -- must be function or 'false'
       run = normrun(spec.run),
       lock = spec.lock,
       url = remove_ending_git_url(url),
