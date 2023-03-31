@@ -68,19 +68,25 @@ local plugin_keys_exclude = {
 }
 
 local function add_profile_data(plugin)
-   local total_time = plugin.config_time or 0
+   local total_exec_time = 0
+   local total_load_time = 0
 
    local path_times = require('packer.loader').path_times
    for p, d in pairs(path_times) do
-      if vim.startswith(p, plugin.install_path) then
+      if vim.startswith(p, plugin.install_path .. '/') then
          plugin.plugin_times = plugin.plugin_times or {}
          plugin.plugin_times[p] = d
-         total_time = total_time + d[1] + d[2]
+         total_load_time = total_load_time + d[1]
+         if vim.startswith(p, plugin.install_path .. '/plugin') then
+            total_exec_time = total_exec_time + d[2]
+         end
       end
    end
 
-   plugin.plugin_time = total_time
-   return total_time
+   plugin.plugin_exec_time = total_exec_time
+   plugin.plugin_load_time = total_load_time
+   plugin.plugin_time = total_load_time + total_exec_time + (plugin.config_time or 0)
+   return plugin.plugin_time
 end
 
 local function get_plugin_status(plugin)

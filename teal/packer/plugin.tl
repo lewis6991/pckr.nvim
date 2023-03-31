@@ -68,6 +68,8 @@ local record M
     -- Profiling
     config_time: number
     plugin_times: {string:{number,number}}
+    plugin_load_time: number
+    plugin_exec_time: number
     plugin_time: number
 
     -- Built from a simple plugin spec (a string)
