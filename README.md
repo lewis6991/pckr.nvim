@@ -1,6 +1,6 @@
 # 🚧 WIP 🚧
 
-Packer v2
+Packer v2 (new name TBD)
 
 Differences:
 - heavily refactored
@@ -57,6 +57,9 @@ Then you can write your plugin specification in Lua, e.g. (in `~/.config/nvim/lu
 ```lua
 -- This file can be loaded by calling `lua require('plugins')` from your init.vim
 
+local cmd = require('packer.loader.cmd')
+local keys = require('packer.loader.keys')
+
 require('packer').add{
   -- Packer can manage itself
   'wbthomason/packer.nvim';
@@ -66,16 +69,19 @@ require('packer').add{
 
   -- Lazy loading:
   -- Load on specific commands
-  {'tpope/vim-dispatch', cmd = {'Dispatch', 'Make', 'Focus', 'Start'}};
+  {'tpope/vim-dispatch',
+    cond = {
+      cmd {'Dispatch', 'Make', 'Focus', 'Start'}
+    }
+  };
 
   -- Load on specific keymap
-  {'tpope/vim-commentary', keys = 'gc'},
+  {'tpope/vim-commentary', cond = keys('n', 'gc') },
 
   -- Load on a combination of conditions: specific filetypes or commands
   -- Also run code after load (see the "config" key)
   { 'w0rp/ale',
-    ft = {'sh', 'zsh', 'bash', 'c', 'cpp', 'cmake', 'html', 'markdown', 'racket', 'vim', 'tex'},
-    cmd = 'ALEEnable',
+    cond = cmd('ALEEnable'),
     config = 'vim.cmd[[ALEEnable]]'
   };
 
@@ -83,7 +89,7 @@ require('packer').add{
   '~/projects/personal/hover.nvim';
 
   -- Plugins can have post-install/update hooks
-  {'iamcco/markdown-preview.nvim', run = 'cd app && yarn install', cmd = 'MarkdownPreview'};
+  {'iamcco/markdown-preview.nvim', run = 'cd app && yarn install', cond = cmd('MarkdownPreview')};
 
   -- Post-install/update hook with neovim command
   -- Install plugin as a 'start' plugin
@@ -121,8 +127,7 @@ require('packer').add{
 :Packer install
 
 " Update installed plugins
-" supports the `--preview` flag as an optional first argument to preview updates
-:Packer update
+:Packer update [plugin]
 
 " Clean, fix, install then update
 " supports the `--preview` flag as an optional first argument to preview updates
@@ -155,7 +160,7 @@ local function bootstrap_packer()
      'git',
      'clone',
      '--depth', '1',
-     'https://github.com/wbthomason/packer.nvim',
+     'https://github.com/lewis6991/packer.nvim',
      fn.stdpath('data')..'/site/pack/packer/start/packer.nvim'
     })
   end
@@ -164,7 +169,7 @@ end
 bootstrap_packer()
 
 require('packer').add{
-  'wbthomason/packer.nvim';
+  'lewis6991/packer.nvim';
   -- My plugins here
   -- 'foo1/bar1.nvim';
   -- 'foo2/bar2.nvim';
@@ -242,28 +247,17 @@ Plugin specs can take two forms:
   'myusername/example',    -- The plugin location string
 
   -- The following keys are all optional
-  branch   = string,              -- Specifies a git branch to use
-  tag      = string,              -- Specifies a git tag to use. Supports '*' for "latest tag"
-  commit   = string,              -- Specifies a git commit to use
-  lock     = boolean,             -- Skip updating this plugin in updates/syncs. Still cleans.
-  run      = string, function or table,  -- Post-update/install hook. See "update/install hooks".
-  requires = string or string[],  -- Specifies plugin dependencies. See "dependencies".
-  config_pre = string or function,  -- Specifies code to run before this plugin is loaded.
-  config   = string or function,  -- Specifies code to run after this plugin is loaded.
-
-  -- The following keys all imply lazy-loading and imply opt = true
-  cmd   = string or string[],     -- Specifies commands which load this plugin. Can be an autocmd pattern.
-  ft    = string or string[],     -- Specifies filetypes which load this plugin.
-  keys  = string or string[],     -- Specifies maps which load this plugin. See "Keybindings".
-  event = string or string[],     -- Specifies autocommand events which load this plugin.
-  cond  = boolean or function,    -- Specifies custom loader
+  branch     = string,                 -- Specifies a git branch to use
+  tag        = string,                 -- Specifies a git tag to use. Supports '*' for "latest tag"
+  commit     = string,                 -- Specifies a git commit to use
+  lock       = boolean,                -- Skip updating this plugin in updates/syncs. Still cleans.
+  run        = string|function|table,  -- Post-update/install hook. See "update/install hooks".
+  requires   = string|string[],        -- Specifies plugin dependencies. See "dependencies".
+  config_pre = string|function,        -- Specifies code to run before this plugin is loaded.
+  config     = string|function,        -- Specifies code to run after this plugin is loaded.
+  cond       = function|function[],    -- Specifies custom loader
 }
 ```
-
-#### Checking plugin statuses
-
-> 🚧 **TODO**: Currently main plugin table is accessed via `require'packer.plugin'.plugins` but
-the format for this table is not API stable.
 
 #### Update/install hooks
 
@@ -293,11 +287,6 @@ Plugins specified in `requires` are removed when no active plugins require them.
 
 > 🚧 **TODO**: explain that plugins can only be specified as a table once.
 
-#### Keybindings
-
-Plugins may be lazy-loaded on the use of keybindings/maps.
-Individual keybindings are specified either as a string (in which case they are treated as normal mode maps) or a table in the format `{mode, map}`.
-
 #### Custom loader
 
 A custom loader for a plugin may be specified via `cond`.
@@ -315,10 +304,13 @@ packer.add{
       vim.api.nvim_input('ga')
     end)
   end}
+}
 
   -- equivalent to --
 
-  {"my/plugin", keys = 'ga'},
+local keys = require('packer.loader.keys')
+packer.add{
+  {"my/plugin", cond = keys('n', 'ga') },
 }
 ```
 

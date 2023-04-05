@@ -2,18 +2,15 @@ local util = require('packer.util')
 local log = require('packer.log')
 local config = require('packer.config')
 
+--- @alias Loader fun(function)
+
 --- @class UserSpec
 --- @field [integer] string
 --- @field branch     string
 --- @field rev        string
 --- @field tag        string
 --- @field commit     string
---- @field lazy       boolean
 --- @field start      boolean
---- @field keys       string|string[]|{[1]:string, [2]:string}[]
---- @field event      string|string[]
---- @field ft         string|string[]
---- @field cmd        string|string[]
 --- @field cond       boolean|Loader|Loader[]
 --- @field run        string|function|(string|function)[]
 --- @field config_pre fun()
@@ -27,10 +24,6 @@ local config = require('packer.config')
 --- @field tag          string
 --- @field commit       string
 --- @field install_path string
---- @field keys         {[1]:string,[2]:string}[]
---- @field event        string[]
---- @field ft           string[]
---- @field cmd          string[]
 --- @field cond         boolean|Loader|Loader[]
 --- @field run          (string|fun())[]
 --- @field config_pre   fun()
@@ -45,9 +38,6 @@ local config = require('packer.config')
 --- @field url              string
 --- @field lock             boolean
 --- @field breaking_commits string[]
----
---- Lazy loaded
---- @field lazy  boolean
 ---
 --- Install as a 'start' plugin
 --- @field start  boolean
@@ -119,30 +109,6 @@ local function normspec(x)
    return type(x) == "string" and { x } or x
 end
 
---- @param x string | string[]
---- @return string[]
-local function normcond(x)
-   if type(x) == "string" then
-      return { x }
-   end
-   return x
-end
-
---- @param x string | (string|{[1]:string,[2]:string})[]
---- @return {[1]:string,[2]:string}[]
-local function normkeys(x)
-   if type(x) == 'string' then
-      return { { '', x } }
-   end
-   if x then
-      local r = {}
-      for _, v in ipairs(x) do
-         r[#r + 1] = type(v) == "string" and { '', v } or v
-      end
-      return r
-   end
-end
-
 --- @param x string | function | (string|function)[]
 --- @return (string|function)[]
 local function normrun(x)
@@ -210,13 +176,8 @@ function M.process_spec(spec0, required_by)
       rev = spec.rev,
       tag = spec.tag,
       commit = spec.commit,
-      lazy = spec.lazy,
       start = spec.start,
       simple = simple,
-      keys = normkeys(spec.keys),
-      event = normcond(spec.event),
-      ft = normcond(spec.ft),
-      cmd = normcond(spec.cmd),
       cond = spec.cond ~= true and spec.cond or nil,   -- must be function or 'false'
       run = normrun(spec.run),
       lock = spec.lock,
@@ -238,15 +199,6 @@ function M.process_spec(spec0, required_by)
    end
 
    M.plugins[name] = plugin
-
-   if not plugin.lazy then
-      plugin.lazy = plugin.keys ~= nil or
-      plugin.ft ~= nil or
-      plugin.cmd ~= nil or
-      plugin.event ~= nil or
-      plugin.cond ~= nil or
-      (required_by or {}).lazy
-   end
 
    plugin.install_path = util.join_paths(plugin.start and config.start_dir or config.opt_dir, name)
 

@@ -121,10 +121,10 @@ function M.load_plugin(plugin)
   if plugin.requires then
     log.fmt_debug('Loading dependencies of %s', plugin.name)
     local all_plugins = require('packer.plugin').plugins
-    local rplugins = vim.tbl_map(function(n)
-      return all_plugins[n]
-    end, plugin.requires)
-    load_plugins(rplugins)
+
+    for _, name in ipairs(plugin.requires) do
+      M.load_plugin(all_plugins[name])
+    end
   end
 
   log.fmt_debug('Loading %s', plugin.name)
@@ -146,18 +146,25 @@ function M.load_plugin(plugin)
   end
 end
 
+--- @generic T
+--- @param x T|T[]
+--- @return T[]
+local function ensurelist(x)
+   return type(x) == "table" and x or { x }
+end
+
 --- @param plugins table<string,Plugin>
 function M.setup(plugins)
-  local Handlers = require('packer.handlers')
-
   for _, plugin in pairs(plugins) do
-    if not plugin.lazy then
+    if not plugin.cond then
       M.load_plugin(plugin)
+    else
+      for _, cond in ipairs(ensurelist(plugin.cond)) do
+        cond(function()
+          M.load_plugin(plugin)
+        end)
+      end
     end
-  end
-
-  for _, cond in ipairs(Handlers.types) do
-    Handlers[cond](plugins, load_plugins)
   end
 end
 
