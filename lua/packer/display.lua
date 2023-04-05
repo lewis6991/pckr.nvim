@@ -407,7 +407,6 @@ local in_headless = #api.nvim_list_uis() == 0
 local display = setmetatable({}, { __index = Display })
 
 display.interactive = not config.display.non_interactive and not in_headless
-display.ask_user = awrap(prompt_user, 3)
 
 --- @class Keymap
 --- @field action string
@@ -746,6 +745,10 @@ local function setup_display_buf(bufnr)
 end
 
 local M = {}
+
+--- Utility function to prompt a user with a question in a floating window
+--- @type fun(headline: string, body: string[]): boolean
+M.ask_user = awrap(prompt_user, 3)
 
 --- Open a new display window
 --- @param cbs? DisplayCallbacks
