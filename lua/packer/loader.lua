@@ -1,6 +1,9 @@
 local log = require('packer.log')
 local util = require('packer.util')
 
+--- @type fun()[]
+local plugin_configs = {}
+
 --- @param plugin Plugin
 local function apply_config(plugin, pre)
   xpcall(function()
@@ -77,17 +80,18 @@ _G.loadfile = function(path)
   local chunk, err = orig_loadfile(path)
   --- @type number
   local load_time = (vim.loop.hrtime() - start1) / 1000000
-  if chunk then
-    return function(...)
-      local start2 = vim.loop.hrtime()
-      local r = { chunk(...) }
-      --- @type number
-      local exec_time = (vim.loop.hrtime() - start2) / 1000000
-      M.path_times[path] = { load_time, exec_time }
-      return unpack(r, 1, (table).maxn(r))
-    end
+  if not chunk then
+    return nil, err
   end
-  return nil, err
+
+  return function(...)
+    local start2 = vim.loop.hrtime()
+    local r = { chunk(...) }
+    --- @type number
+    local exec_time = (vim.loop.hrtime() - start2) / 1000000
+    M.path_times[path] = { load_time, exec_time }
+    return unpack(r, 1, table.maxn(r))
+  end
 end
 
 --- @param plugins Plugin[]
@@ -104,7 +108,7 @@ function M.load_plugin(plugin)
     return
   end
 
-  if not vim.loop.fs_stat(plugin.install_path) then
+  if vim.fn.isdirectory(plugin.install_path) == 0 then
     log.fmt_error('%s is not installed', plugin.name)
     return
   end
@@ -132,9 +136,9 @@ function M.load_plugin(plugin)
       vim.cmd.packadd({ plugin.name, bang = true })
     end
 
-    require('packer.plugin_config').add(function()
+    plugin_configs[#plugin_configs + 1] = function()
       apply_config(plugin, false) -- spec.config()
-    end)
+    end
   else
     if not plugin.start then
       vim.cmd.packadd(plugin.name)
@@ -158,6 +162,13 @@ function M.setup(plugins)
   for _, cond in ipairs(Handlers.types) do
     Handlers[cond](plugins, load_plugins)
   end
+end
+
+function M.run_configs()
+  for _, cfg in ipairs(plugin_configs) do
+    cfg()
+  end
+  plugin_configs = {}
 end
 
 return M

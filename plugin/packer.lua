@@ -12,4 +12,4 @@ vim.api.nvim_create_user_command(
 )
 
 -- Run 'config' keys in user spec.
-require'packer.plugin_config'.run()
+require'packer.loader'.run_configs()
