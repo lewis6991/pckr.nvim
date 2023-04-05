@@ -16,8 +16,8 @@ local config = require('packer.config')
 --- @field cmd        string|string[]
 --- @field cond       boolean|Loader|Loader[]
 --- @field run        string|function|(string|function)[]
---- @field config_pre string|function()
---- @field config     string|function()
+--- @field config_pre fun()
+--- @field config     fun()
 --- @field lock       boolean
 --- @field requires   string|(string|UserSpec)[]
 
@@ -33,8 +33,8 @@ local config = require('packer.config')
 --- @field cmd          string[]
 --- @field cond         boolean|Loader|Loader[]
 --- @field run          (string|fun())[]
---- @field config_pre   string|fun()
---- @field config       string|fun()
+--- @field config_pre   fun()
+--- @field config       fun()
 --- @field requires     string[]
 ---
 --- @field name         string
@@ -76,7 +76,6 @@ local M = {
   plugins = {}
 }
 
-
 --- @param path string
 --- @return string, PluginType
 local function guess_plugin_type(path)
@@ -90,7 +89,7 @@ local function guess_plugin_type(path)
       return path, 'git'
    end
 
-   path = table.concat(vim.split(path, '\\', true), '/')
+   path = table.concat(vim.split(path, '\\', { plain = true }), '/')
    return config.git.default_url_format:format(path), 'git'
 end
 

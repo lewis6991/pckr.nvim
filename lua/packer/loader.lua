@@ -4,32 +4,29 @@ local util = require('packer.util')
 --- @type fun()[]
 local plugin_configs = {}
 
---- @param plugin Plugin
-local function apply_config(plugin, pre)
-  xpcall(function()
-    --- @type fun()|string, string
-    local c, sfx
-    if pre then
-      c, sfx = plugin.config_pre, '_pre'
-    else
-      c, sfx = plugin.config, ''
-    end
+--- @param name string
+local function config_error_handler(name)
+  --- @param err string
+  return function(err)
+    log.fmt_error('Error running config for %s:\n\t%s', name, err)
+  end
+end
 
-    if c then
-      log.fmt_debug('Running config%s for %s', sfx, plugin.name)
-      local c0 --- @type fun()
-      if type(c) == "function" then
-        c0 = c
-      else
-        c0 = assert(loadstring(c, plugin.name .. '.config' .. sfx))
-      end
-      local delta = util.measure(c0)
-      log.fmt_debug('config%s for %s took %fms', sfx, plugin.name, delta * 1000)
-      plugin.config_time = delta * 1000
-    end
-  end, function(x)
-      log.fmt_error('Error running config for %s: %s', plugin.name, x)
-    end)
+--- @param plugin Plugin
+--- @param field 'config' | 'config_pre'
+local function apply_config(plugin, field)
+  local c = plugin[field] ---@type fun()?
+
+  if not c then
+    return
+  end
+
+  xpcall(function()
+    log.fmt_debug('Running %s for %s', field, plugin.name)
+    local delta = util.measure(c)
+    log.fmt_debug('%s for %s took %fms', field, plugin.name, delta * 1000)
+    plugin.config_time = delta * 1000
+  end, config_error_handler(plugin.name))
 end
 
 --- @param path string
@@ -109,13 +106,13 @@ function M.load_plugin(plugin)
   end
 
   if vim.fn.isdirectory(plugin.install_path) == 0 then
-    log.fmt_error('%s is not installed', plugin.name)
+    log.fmt_warn('%s is not installed', plugin.name)
     return
   end
 
   log.fmt_debug('Running loader for %s', plugin.name)
 
-  apply_config(plugin, true) -- spec.config_pre()
+  apply_config(plugin, 'config_pre')
 
   -- Set the plugin as loaded before config is run in case something in the
   -- config tries to load this same plugin again
@@ -137,7 +134,7 @@ function M.load_plugin(plugin)
     end
 
     plugin_configs[#plugin_configs + 1] = function()
-      apply_config(plugin, false) -- spec.config()
+      apply_config(plugin, 'config')
     end
   else
     if not plugin.start then
@@ -145,7 +142,7 @@ function M.load_plugin(plugin)
       source_after(plugin.install_path)
     end
 
-    apply_config(plugin, false) -- spec.config()
+    apply_config(plugin, 'config')
   end
 end
 
