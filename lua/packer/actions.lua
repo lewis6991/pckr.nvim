@@ -167,19 +167,18 @@ local install_task = a.sync(function(plugin, disp, installs)
   return plugin.name, err
 end, 3)
 
---- @param plugins table<string,Plugin>
 --- @param missing_plugins string[]
 --- @param disp Display
 --- @param installs table<string,Result>
 --- @return (fun(function))[]
-local function get_install_tasks(plugins, missing_plugins, disp, installs)
+local function get_install_tasks(missing_plugins, disp, installs)
   if #missing_plugins == 0 then
     return {}
   end
 
   local tasks = {} --- @type (fun(function))[]
   for _, v in ipairs(missing_plugins) do
-    tasks[#tasks + 1] = a.curry(install_task, plugins[v], disp, installs)
+    tasks[#tasks + 1] = a.curry(install_task, packer_plugins[v], disp, installs)
   end
 
   return tasks
@@ -270,15 +269,14 @@ local update_task = a.sync(function(plugin, disp, updates, opts)
   return plugin.name, plugin.err
 end, 4)
 
---- @param plugins table<string,Plugin>
 --- @param update_plugins string[]
 --- @param disp Display
 --- @param updates table<string,Result>
 --- @return (fun(function))[]
-local function get_update_tasks(plugins, update_plugins, disp, updates, opts)
+local function get_update_tasks(update_plugins, disp, updates, opts)
   local tasks = {} --- @type (fun(function))[]
   for _, v in ipairs(update_plugins) do
-    local plugin = plugins[v]
+    local plugin = packer_plugins[v]
     if not plugin then
       log.fmt_error('Unknown plugin: %s', v)
     end
@@ -309,21 +307,6 @@ local function fix_plugin_types(plugins, extra_plugins, moves, fs_state)
     end
   end
   log.debug('Done fixing plugin types')
-end
-
--- Filter out options specified as the first argument to update or sync
--- returns the options table and the plugin names
-local function filter_opts_from_plugins(...)
-  local args = { ... }
-  local opts = {}
-  if not vim.tbl_isempty(args) then
-    local first = select(1, ...)
-    if type(first) == "table" then
-      table.remove(args, 1)
-      opts = first
-    end
-  end
-  return opts, #args > 0 and args or vim.tbl_keys(packer_plugins)
 end
 
 -- Find and remove any plugins not currently configured for use
@@ -374,7 +357,7 @@ end, 4)
 
 --- Install operation:
 --- Installs missing plugins, then updates helptags
-M.install = a.sync(function()
+M.install = a.sync(function(_install_plugins, _opts)
   local fs_state = fsstate.get_fs_state(packer_plugins)
   local missing_plugins = vim.tbl_values(fs_state.missing)
   if #missing_plugins == 0 then
@@ -390,7 +373,7 @@ M.install = a.sync(function()
   local installs = {}  --- @type table<string,Result>
 
   local delta = util.measure(function()
-    local install_tasks = get_install_tasks(packer_plugins, missing_plugins, disp, installs)
+    local install_tasks = get_install_tasks(missing_plugins, disp, installs)
     run_tasks(install_tasks, disp, 'installing')
 
     a.main()
@@ -398,14 +381,18 @@ M.install = a.sync(function()
   end)
 
   disp:finish(delta)
-end)
+end, 2)
 
 --- Update operation:
 --- Takes an optional list of plugin names as an argument. If no list is given,
 --- operates on all managed plugin then updates installed plugins and updates
 --- helptags. - Options can be specified in the first argument as either a table -
-M.update = a.void(function(...)
-  local opts, update_plugins = filter_opts_from_plugins(...)
+--- @param update_plugins string[]
+--- @param opts table<string,boolean>
+M.update = a.void(function(update_plugins, opts)
+  if #update_plugins == 0 then
+    update_plugins = vim.tbl_keys(packer_plugins)
+  end
   local fs_state = fsstate.get_fs_state(packer_plugins)
   local _, installed_plugins = util.partition(vim.tbl_values(fs_state.missing), update_plugins)
 
@@ -416,13 +403,10 @@ M.update = a.void(function(...)
   local disp = open_display()
 
   local delta = util.measure(function()
-    local tasks = {}
-
     a.main()
 
     log.debug('Gathering update tasks')
-    vim.list_extend(tasks, get_update_tasks(packer_plugins, installed_plugins, disp, updates, opts))
-
+    local tasks = get_update_tasks(installed_plugins, disp, updates, opts)
     run_tasks(tasks, disp, 'updating')
 
     a.main()
@@ -437,9 +421,12 @@ end)
 --- operates on all managed plugins. Fixes plugin types, installs missing
 --- plugins, then updates installed plugins and updates helptags and rplugins
 --- Options can be specified in the first argument as either a table
-M.sync = a.void(function(...)
-  local plugins = packer_plugins
-  local opts, update_plugins = filter_opts_from_plugins(...)
+--- @param update_plugins string[]
+--- @param opts table<string,boolean>
+M.sync = a.void(function(update_plugins, opts)
+  if #update_plugins == 0 then
+    update_plugins = vim.tbl_keys(packer_plugins)
+  end
   local fs_state = fsstate.get_fs_state(packer_plugins)
 
   local extra_plugins = util.partition(vim.tbl_values(fs_state.extra), update_plugins)
@@ -469,12 +456,12 @@ M.sync = a.void(function(...)
     local tasks = {}
 
     log.debug('Gathering install tasks')
-    vim.list_extend(tasks, get_install_tasks(plugins, missing_plugins, disp, results.installs))
+    vim.list_extend(tasks, get_install_tasks(missing_plugins, disp, results.installs))
 
     a.main()
 
     log.debug('Gathering update tasks')
-    vim.list_extend(tasks, get_update_tasks(plugins, installed_plugins, disp, results.updates, opts))
+    vim.list_extend(tasks, get_update_tasks(installed_plugins, disp, results.updates, opts))
 
     run_tasks(tasks, disp, 'syncing')
 
@@ -485,22 +472,22 @@ M.sync = a.void(function(...)
   disp:finish(delta)
 end)
 
-M.status = a.sync(function()
+M.status = a.sync(function(_, _)
   require('packer.status').run()
-end)
+end, 2)
 
 --- Clean operation:
 -- Finds plugins present in the `packer` package but not in the managed set
-M.clean = a.void(function()
+M.clean = a.void(function(_, _)
   do_clean(packer_plugins)
 end)
 
-M.lock = a.sync(function()
+M.lock = a.sync(function(_, _)
   require('packer.lockfile').lock()
-end)
+end, 2)
 
-M.restore = a.sync(function()
+M.restore = a.sync(function(_, _)
   require('packer.lockfile').restore()
-end)
+end, 2)
 
 return M
