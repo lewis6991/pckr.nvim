@@ -316,23 +316,26 @@ local function checkout(plugin, disp)
   end
 
   local target --- @type string
+  local branch --- @type string?
+  local checkout_args = {} --- @type string[]
+
   if plugin.commit then
     target = plugin.commit
   elseif tag then
     --- @type string
     target = 'tags/' .. tag
   else
-    local branch = plugin.branch or get_current_branch(plugin)
-    target = ref(plugin.install_path, 'remotes', 'origin', branch) or
-    ref(plugin.install_path, 'heads', branch)
+    branch = plugin.branch or get_current_branch(plugin)
+    vim.list_extend(checkout_args, { '-B', branch })
+    local remote_target = ref(plugin.install_path, 'remotes', 'origin', branch)
+    target = remote_target or ref(plugin.install_path, 'heads', branch)
   end
 
   assert(target, 'Could not determine target for ' .. plugin.install_path)
 
   update_disp('checking out...')
-  return git_run({
-    'checkout', '--progress', target,
-  }, {
+  local cmd = vim.list_extend({'checkout', '--progress', target}, checkout_args)
+  return git_run(cmd, {
       cwd = plugin.install_path,
       on_stderr = function(chunk)
         update_disp('checking out... ', process_progress(chunk))
