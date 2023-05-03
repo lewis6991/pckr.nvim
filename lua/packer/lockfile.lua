@@ -13,10 +13,11 @@ local M = {}
 --- @param tasks fun()[]
 --- @param disp? Display
 --- @param kind? string
+--- @return {[1]: string, [2]: string }[]
 local function run_tasks(tasks, disp, kind)
   if #tasks == 0 then
     log.info('Nothing to do!')
-    return
+    return {}
   end
 
   local function interrupt_check()

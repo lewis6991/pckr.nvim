@@ -23,7 +23,7 @@ local function open_display()
   return display.open({
     diff = function(plugin, commit, callback)
       local plugin_type = require('packer.plugin_types')[plugin.type]
-      return plugin_type.diff(plugin, commit, callback)
+      plugin_type.diff(plugin, commit, callback)
     end,
     revert_last = function(plugin)
       local plugin_type = require('packer.plugin_types')[plugin.type]
@@ -53,7 +53,8 @@ local function run_tasks(tasks, disp, kind)
   if disp then
     disp:update_headline_message(string.format('%s %d / %d plugins', kind, #tasks, #tasks))
   end
-  return a.join(limit, check, tasks)
+
+  a.join(limit, check, tasks)
 end
 
 --- @param dir string
@@ -76,8 +77,12 @@ local function helptags_stale(dir)
     return true
   end
 
+  ---@type integer
   local txt_newest = math.max(unpack(vim.tbl_map(fn.getftime, txts)))
+
+  ---@type integer
   local tag_oldest = math.min(unpack(vim.tbl_map(fn.getftime, tags)))
+
   return txt_newest > tag_oldest
 end
 
@@ -218,9 +223,8 @@ end
 --- @param plugin Plugin
 --- @param disp Display
 --- @param updates table<string,Result>
---- @param opts table
 --- @return string?, string[]?
-local update_task = a.sync(function(plugin, disp, updates, opts)
+local update_task = a.sync(function(plugin, disp, updates)
   disp:task_start(plugin.name, 'updating...')
 
   if plugin.lock then
@@ -231,7 +235,7 @@ local update_task = a.sync(function(plugin, disp, updates, opts)
   local plugin_type = require('packer.plugin_types')[plugin.type]
   local actual_update = false
 
-  plugin.err = plugin_type.updater(plugin, disp, opts)
+  plugin.err = plugin_type.updater(plugin, disp)
   if not plugin.err and plugin.type == 'git' then
     local revs = plugin.revs
     actual_update = revs[1] ~= revs[2]
@@ -267,13 +271,13 @@ local update_task = a.sync(function(plugin, disp, updates, opts)
 
   updates[plugin.name] = { err = plugin.err }
   return plugin.name, plugin.err
-end, 4)
+end, 3)
 
 --- @param update_plugins string[]
 --- @param disp Display
 --- @param updates table<string,Result>
 --- @return (fun(function))[]
-local function get_update_tasks(update_plugins, disp, updates, opts)
+local function get_update_tasks(update_plugins, disp, updates)
   local tasks = {} --- @type (fun(function))[]
   for _, v in ipairs(update_plugins) do
     local plugin = packer_plugins[v]
@@ -281,7 +285,7 @@ local function get_update_tasks(update_plugins, disp, updates, opts)
       log.fmt_error('Unknown plugin: %s', v)
     end
     if plugin and not plugin.lock then
-      tasks[#tasks + 1] = a.curry(update_task, plugin, disp, updates, opts)
+      tasks[#tasks + 1] = a.curry(update_task, plugin, disp, updates)
     end
   end
 
@@ -388,8 +392,7 @@ end, 2)
 --- operates on all managed plugin then updates installed plugins and updates
 --- helptags. - Options can be specified in the first argument as either a table -
 --- @param update_plugins string[]
---- @param opts table<string,boolean>
-M.update = a.void(function(update_plugins, opts)
+M.update = a.void(function(update_plugins)
   if #update_plugins == 0 then
     update_plugins = vim.tbl_keys(packer_plugins)
   end
@@ -406,7 +409,7 @@ M.update = a.void(function(update_plugins, opts)
     a.main()
 
     log.debug('Gathering update tasks')
-    local tasks = get_update_tasks(installed_plugins, disp, updates, opts)
+    local tasks = get_update_tasks(installed_plugins, disp, updates)
     run_tasks(tasks, disp, 'updating')
 
     a.main()
@@ -422,8 +425,7 @@ end)
 --- plugins, then updates installed plugins and updates helptags and rplugins
 --- Options can be specified in the first argument as either a table
 --- @param update_plugins string[]
---- @param opts table<string,boolean>
-M.sync = a.void(function(update_plugins, opts)
+M.sync = a.void(function(update_plugins)
   if #update_plugins == 0 then
     update_plugins = vim.tbl_keys(packer_plugins)
   end
@@ -461,7 +463,7 @@ M.sync = a.void(function(update_plugins, opts)
     a.main()
 
     log.debug('Gathering update tasks')
-    vim.list_extend(tasks, get_update_tasks(installed_plugins, disp, results.updates, opts))
+    vim.list_extend(tasks, get_update_tasks(installed_plugins, disp, results.updates))
 
     run_tasks(tasks, disp, 'syncing')
 

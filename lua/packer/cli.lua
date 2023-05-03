@@ -14,9 +14,14 @@ end
 --- @return string[]
 local function plugin_complete(lead, _)
   local plugins = require('packer.plugin').plugins
-  local completion_list = vim.tbl_filter(function(name)
-    return vim.startswith(name, lead)
-  end, vim.tbl_keys(plugins))
+  local completion_list = vim.tbl_filter(
+    --- @param name string
+    --- @return boolean
+    function(name)
+      return vim.startswith(name, lead)
+    end,
+    vim.tbl_keys(plugins)
+  )
   table.sort(completion_list)
   return completion_list
 end

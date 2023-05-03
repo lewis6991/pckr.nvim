@@ -392,6 +392,7 @@ end
 
 --- @param plugin Plugin
 --- @param disp Display
+--- @return boolean?, string[]
 local function install(plugin, disp)
   local ok, out = clone(plugin, disp, config.git.clone_timeout)
   if not ok then
@@ -408,6 +409,7 @@ end
 
 --- @param plugin Plugin
 --- @param disp Display
+--- @return string[]?
 M.installer = async(function(plugin, disp)
   local ok, out = install(plugin, disp)
 
@@ -431,6 +433,7 @@ end
 
 --- @param plugin Plugin
 --- @param disp Display
+--- @return boolean, string[]?
 local function update(plugin, disp)
   disp:task_update(plugin.name, 'checking current commit...')
 
@@ -498,6 +501,7 @@ end
 
 --- @param plugin Plugin
 --- @param disp Display
+--- @return string[]?
 M.updater = async(function(plugin, disp)
   local ok, out = update(plugin, disp)
   if not ok then
@@ -507,6 +511,7 @@ M.updater = async(function(plugin, disp)
 end, 2)
 
 --- @param plugin Plugin
+--- @return string?
 M.remote_url = async(function(plugin)
   local ok, out = git_run({ 'remote', 'get-url', 'origin' }, {
     cwd = plugin.install_path,
@@ -530,9 +535,9 @@ M.diff = async(function(plugin, commit, callback)
     })
 
   if ok then
-    return callback(split_messages(out))
+    callback(split_messages(out))
   else
-    return callback(nil, out)
+    callback(nil, out)
   end
 end, 3)
 
@@ -560,6 +565,7 @@ end, 1)
 --- Reset the plugin to `commit`
 --- @param plugin Plugin
 --- @param commit string
+--- @return string[]?
 M.revert_to = async(function(plugin, commit)
   assert(type(commit) == 'string', fmt("commit: string expected but '%s' provided", type(commit)))
   log.fmt_debug("Reverting '%s' to commit '%s'", plugin.name, commit)
@@ -574,6 +580,7 @@ end, 2)
 
 --- Returns HEAD's short hash
 --- @param plugin Plugin
+--- @return string?
 M.get_rev = async(function(plugin)
   return get_head(plugin.install_path)
 end, 1)

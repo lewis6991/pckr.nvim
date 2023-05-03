@@ -43,6 +43,7 @@ end, 2)
 
 --- @param plugin Plugin
 --- @param disp Display
+--- @return string[]?
 M.updater = a.sync(function(plugin, disp)
   local from = uv.fs_realpath(util.strip_trailing_sep(plugin.url))
   local to = util.strip_trailing_sep(plugin.install_path)
@@ -56,26 +57,29 @@ M.updater = a.sync(function(plugin, disp)
 
   sleep(200)
 
+  --- @diagnostic disable-next-line:param-type-mismatch
   local is_link = uv.fs_lstat(to).type == 'link'
   if not is_link then
     log.fmt_debug('%s: %s is not a link', plugin.name, to)
     return { to .. ' is not a link' }
   end
 
-  if uv.fs_realpath(to) ~= from then
-    disp:task_update(plugin.name, string.format('updating symlink from %s to %s', from, to))
-    local err, success = unlink(to)
-    if err then
-      log.fmt_debug('%s: failed to unlink %s: %s', plugin.name, to, err)
-      return { err }
-    end
-    assert(success)
-    log.fmt_debug('%s: did unlink', plugin.name)
-    local err2 = symlink(from, to, { dir = true })
-    if err2 then
-      log.fmt_debug('%s: failed to link from %s to %s: %s', plugin.name, from, to, err2)
-      return { err2 }
-    end
+  if uv.fs_realpath(to) == from then
+    return
+  end
+
+  disp:task_update(plugin.name, string.format('updating symlink from %s to %s', from, to))
+  local err, success = unlink(to)
+  if err then
+    log.fmt_debug('%s: failed to unlink %s: %s', plugin.name, to, err)
+    return { err }
+  end
+  assert(success)
+  log.fmt_debug('%s: did unlink', plugin.name)
+  local err2 = symlink(from, to, { dir = true })
+  if err2 then
+    log.fmt_debug('%s: failed to link from %s to %s: %s', plugin.name, from, to, err2)
+    return { err2 }
   end
 end, 1)
 

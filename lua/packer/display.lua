@@ -25,7 +25,7 @@ local TITLE = 'packer.nvim'
 --- @field mark integer Extmark used track the location of the item in the buffer
 
 --- @class DisplayCallbacks
---- @field diff        fun(plugin: Plugin, commit: string, callback: function): string[]
+--- @field diff        fun(plugin: Plugin, commit: string, callback: function)
 --- @field revert_last fun(plugin: Plugin)
 
 --- @class Display
@@ -53,6 +53,7 @@ local function get_plugin(disp)
   -- does not return all the extmarks that the following would:
   --       nvim_buf_get_extmarks(0, ns, {row, 0}, {row,-1}, {})
   for _, e in ipairs(api.nvim_buf_get_extmarks(0, ns, 0, -1, { details = true })) do
+    --- @type integer, integer, integer
     local id, srow, erow = e[1], e[2], e[4].end_row
     if row >= srow and row <= erow then
       for name, item in pairs(disp.items) do
@@ -177,6 +178,7 @@ local function get_task_region(self, plugin)
 
   local info = api.nvim_buf_get_extmark_by_id(self.buf, ns, mark, { details = true })
 
+  --- @type integer, integer?
   local srow, erow = info[1], info[3].end_row
 
   if not erow then
@@ -488,7 +490,7 @@ local function decrement_headline_count(disp)
   end
 end
 
---- @param x string[]
+--- @param x string[]?
 --- @return string[]?
 local function normalize_lines(x)
   if not x then
@@ -506,6 +508,8 @@ end
 --- @param self Display
 --- @param plugin string
 --- @param message string
+--- @param info? string[]
+--- @param success? boolean
 local task_done = vim.schedule_wrap(function(self, plugin, message, info, success)
   if not valid_display(self) then
     return
@@ -767,6 +771,9 @@ function M.open(cbs)
   display.running = true
 
   display.items = setmetatable({}, {
+    --- @param t table<string,Item>
+    --- @param k string
+    --- @return Item
     __index = function(t, k)
       t[k] = { expanded = false }
       return t[k]

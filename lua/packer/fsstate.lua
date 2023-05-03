@@ -19,6 +19,7 @@ local M = {}
 --- @return 'git' | 'local' | 'unknown'
 local function guess_dir_type(dir)
   local globdir = fn.glob(dir)
+  --- @diagnostic disable-next-line:param-type-mismatch
   local dir_type = (uv.fs_lstat(globdir) or { type = 'noexist' }).type
 
   if dir_type == 'link' then
@@ -42,15 +43,9 @@ local function get_installed_plugins()
     [config.opt_dir] = opt_plugins,
     [config.start_dir] = start_plugins,
   }) do
-    local dir_handle = uv.fs_opendir(dir, nil, 50)
-    if dir_handle then
-      local dir_items = uv.fs_readdir(dir_handle)
-      while dir_items do
-        for _, item in ipairs(dir_items) do
-          tbl[util.join_paths(dir, item.name)] = item.name
-        end
-
-        dir_items = uv.fs_readdir(dir_handle)
+    for name, ty in vim.fs.dir(dir) do
+      if ty ~= 'file' then
+        tbl[util.join_paths(dir, name)] = name
       end
     end
   end
@@ -59,10 +54,7 @@ local function get_installed_plugins()
 end
 
 local function toboolean(x)
-  if x then
-    return true
-  end
-  return false
+  return x and true
 end
 
 --- @param plugins table<string,Plugin>

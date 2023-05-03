@@ -36,7 +36,6 @@ local M = {}
 --- @param argc integer
 --- @return F
 function M.wrap(func, argc)
-  --- @async
   return function(...)
     if not co.running() or select('#', ...) == argc then
       return func(...)
@@ -76,7 +75,6 @@ function M.void(func)
   end
 end
 
---- @async
 function M.join(n, interrupt_check, thunks)
   return co.yield(1, function(finish)
     if #thunks == 0 then

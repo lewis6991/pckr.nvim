@@ -204,6 +204,7 @@ function M.process_spec(spec0, required_by)
 
    if spec.requires then
       local sr = spec.requires
+      ---@type string[]
       local r = type(sr) == "string" and { sr } or sr
 
       plugin.requires = {}
