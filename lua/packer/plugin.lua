@@ -42,6 +42,7 @@ local config = require('packer.config')
 --- Install as a 'start' plugin
 --- @field start  boolean
 --- @field loaded  boolean
+--- @field installed  boolean
 ---
 --- Profiling
 --- @field config_time       number
@@ -69,14 +70,14 @@ local M = {
 --- @param path string
 --- @return string, PluginType
 local function guess_plugin_type(path)
-   if vim.fn.isdirectory(path) ~= 0 then
-      return path, 'local'
-   end
-
    if vim.startswith(path, 'git://') or
       vim.startswith(path, 'http') or
       path:match('@') then
       return path, 'git'
+   end
+
+   if vim.fn.isdirectory(path) ~= 0 then
+      return path, 'local'
    end
 
    path = table.concat(vim.split(path, '\\', { plain = true }), '/')
@@ -168,6 +169,9 @@ function M.process_spec(spec0, required_by)
       log.debug('Overriding simple plugin spec: ' .. name)
    end
 
+   local install_path = util.join_paths(spec.start and config.start_dir or config.opt_dir, name)
+
+
    local url, ptype = guess_plugin_type(path)
 
    local plugin = {
@@ -182,6 +186,8 @@ function M.process_spec(spec0, required_by)
       run = normrun(spec.run),
       lock = spec.lock,
       url = remove_ending_git_url(url),
+      install_path = install_path,
+      installed = vim.fn.isdirectory(install_path) ~= 0,
       type = ptype,
       config_pre = spec.config_pre,
       config = spec.config,
@@ -199,8 +205,6 @@ function M.process_spec(spec0, required_by)
    end
 
    M.plugins[name] = plugin
-
-   plugin.install_path = util.join_paths(plugin.start and config.start_dir or config.opt_dir, name)
 
    if spec.requires then
       local sr = spec.requires

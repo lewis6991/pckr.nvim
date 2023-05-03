@@ -168,6 +168,8 @@ local install_task = a.sync(function(plugin, disp, installs)
     log.fmt_debug('Failed to install %s: %s', plugin.name, vim.inspect(err))
   end
 
+  plugin.installed = vim.fn.isdirectory(plugin.install_path) ~= 0
+
   installs[plugin.name] = { err = err }
   return plugin.name, err
 end, 3)
@@ -361,10 +363,16 @@ end, 4)
 
 --- Install operation:
 --- Installs missing plugins, then updates helptags
-M.install = a.sync(function(_install_plugins, _opts)
-  local fs_state = fsstate.get_fs_state(packer_plugins)
-  local missing_plugins = vim.tbl_values(fs_state.missing)
-  if #missing_plugins == 0 then
+--- @param install_plugins string[]
+--- @param _opts? table
+--- @param __cb fun()
+M.install = a.sync(function(install_plugins, _opts, __cb)
+  if not install_plugins then
+    local fs_state = fsstate.get_fs_state(packer_plugins)
+    install_plugins = vim.tbl_values(fs_state.missing)
+  end
+
+  if #install_plugins == 0 then
     log.info('All configured plugins are installed')
     return
   end
@@ -377,7 +385,7 @@ M.install = a.sync(function(_install_plugins, _opts)
   local installs = {}  --- @type table<string,Result>
 
   local delta = util.measure(function()
-    local install_tasks = get_install_tasks(missing_plugins, disp, installs)
+    local install_tasks = get_install_tasks(install_plugins, disp, installs)
     run_tasks(install_tasks, disp, 'installing')
 
     a.main()

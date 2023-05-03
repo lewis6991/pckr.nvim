@@ -343,10 +343,10 @@ local function checkout(plugin, disp)
     })
 end
 
-local function mark_breaking_changes(
-  plugin,
-  disp)
-
+--- @param plugin Plugin
+--- @param disp Display
+--- @return boolean, string[]
+local function mark_breaking_changes(plugin, disp)
   disp:task_update(plugin.name, 'checking for breaking changes...')
   local ok, out = git_run({
     'log',

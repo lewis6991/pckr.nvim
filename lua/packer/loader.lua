@@ -91,13 +91,6 @@ _G.loadfile = function(path)
   end
 end
 
---- @param plugins Plugin[]
-local function load_plugins(plugins)
-  for _, plugin in ipairs(plugins) do
-    M.load_plugin(plugin)
-  end
-end
-
 --- @param plugin Plugin
 function M.load_plugin(plugin)
   if plugin.loaded then
@@ -105,7 +98,7 @@ function M.load_plugin(plugin)
     return
   end
 
-  if vim.fn.isdirectory(plugin.install_path) == 0 then
+  if not plugin.installed then
     log.fmt_warn('%s is not installed', plugin.name)
     return
   end

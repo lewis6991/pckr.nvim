@@ -42,6 +42,7 @@ local join_paths = util.join_paths
 --- @field opt_dir      string
 --- @field auto_clean   boolean
 --- @field autoremove   boolean
+--- @field autoinstall  boolean
 --- @field display      Display
 --- @field git          Git
 --- @field log          Log
@@ -80,6 +81,7 @@ local default_config = {
       path = util.join_paths(vim.fn.stdpath('config'), 'packer', 'lockfile.lua'),
    },
    autoremove = false,
+   autoinstall = true,
 }
 
 local config = vim.deepcopy(default_config)

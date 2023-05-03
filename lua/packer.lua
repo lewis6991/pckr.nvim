@@ -1,3 +1,5 @@
+local api = vim.api
+
 local log = require('packer.log')
 local config = require('packer.config')
 local plugin = require('packer.plugin')
@@ -22,6 +24,11 @@ end
 
 local M = {}
 
+local function load_plugins()
+  log.debug('LOADING PLUGINS')
+  loader.setup(plugin.plugins)
+end
+
 function M.add(spec)
   if not did_setup then
     setup()
@@ -30,8 +37,25 @@ function M.add(spec)
   log.debug('PROCESSING PLUGIN SPEC')
   plugin.process_spec(spec)
 
-  log.debug('LOADING PLUGINS')
-  loader.setup(plugin.plugins)
+  local to_install = {}  --- @type string[]
+
+  if config.autoinstall then
+    for name, p in pairs(plugin.plugins) do
+      if not p.installed then
+        to_install[#to_install+1] = name
+      end
+    end
+  end
+
+  if #to_install > 0 then
+    local cwin = api.nvim_get_current_win()
+    require('packer.actions').install(to_install, nil, function()
+      -- Run loader in initial window so window options set properly
+      api.nvim_win_call(cwin, load_plugins)
+    end)
+  else
+    load_plugins()
+  end
 end
 
 -- This should be safe to call multiple times.
@@ -43,21 +67,6 @@ function M.setup(user_config, user_spec)
   if user_spec then
     M.add(user_spec)
   end
-end
-
--- @deprecated use setup() instead
--- Convenience function for simple setup
--- spec can be a table with a table of plugin specifications as its first
--- element, config overrides as another element.
-function M.startup(spec)
-  log.debug('STARTING')
-  assert(type(spec) == 'table')
-
-  local user_spec = spec[1] --[[@as UserSpec]]
-  assert(type(user_spec) == "table")
-
-  M.setup(spec.config --[[@as Config]])
-  M.add(user_spec)
 end
 
 return M
