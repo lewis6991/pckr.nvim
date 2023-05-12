@@ -6,55 +6,54 @@ local config = require('packer.config')
 
 --- @class UserSpec
 --- @field [integer] string
---- @field branch     string
---- @field rev        string
---- @field tag        string
---- @field commit     string
---- @field start      boolean
---- @field cond       boolean|PluginLoader|PluginLoader[]
---- @field run?       fun()|string
+--- @field branch?     string
+--- @field rev         string
+--- @field tag?        string
+--- @field commit?     string
+--- @field start?      boolean
+--- @field cond?       boolean|PluginLoader|PluginLoader[]
+--- @field run?        fun()|string
 --- @field config_pre? fun()|string
 --- @field config?     fun()|string
---- @field lock       boolean
---- @field requires   string|(string|UserSpec)[]
+--- @field lock?       boolean
+--- @field requires?   string|(string|UserSpec)[]
 
 --- @class Plugin
---- @field branch       string
---- @field rev          string
---- @field tag          string
---- @field commit       string
+--- @field branch?      string
+--- @field rev?         string
+--- @field tag?         string
+--- @field commit?      string
 --- @field install_path string
---- @field cond         boolean|PluginLoader|PluginLoader[]
+--- @field cond?         boolean|PluginLoader|PluginLoader[]
 --- @field run?         fun()|string
 --- @field config_pre?  fun()
 --- @field config?      fun()
---- @field requires     string[]
+--- @field requires?    string[]
+--- @field lock?        boolean
 ---
 --- @field name         string
---- @field revs         {[1]: string, [2]: string}
---- @field required_by  string[]
----
---- @field type             PluginType
---- @field url              string
---- @field lock             boolean
---- @field breaking_commits string[]
+--- @field revs         {[1]: string?, [2]: string?}
+--- @field required_by? string[]
+--- @field type              PluginType
+--- @field url               string
+--- @field breaking_commits? string[]
 ---
 --- Install as a 'start' plugin
---- @field start  boolean
---- @field loaded  boolean
---- @field installed  boolean
+--- @field start?     boolean
+--- @field loaded?    boolean
+--- @field installed? boolean
 ---
 --- Profiling
---- @field config_time       number
---- @field plugin_times      table<string,{[1]:number,[2]:number}>
---- @field plugin_load_time  number
---- @field plugin_exec_time  number
---- @field plugin_time       number
+--- @field config_time?      number
+--- @field plugin_times?     table<string,{[1]:number,[2]:number}>
+--- @field plugin_load_time? number
+--- @field plugin_exec_time? number
+--- @field plugin_time?      number
 ---
---- -- Built from a simple plugin spec (a string)
+--- Built from a simple plugin spec (a string). Used for requires
 --- @field simple boolean
 ---
---- @field messages string[]
+--- @field messages? string[]
 --- @field err? string[]
 
 --- @alias PluginType

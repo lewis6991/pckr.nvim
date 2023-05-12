@@ -5,6 +5,7 @@ local util = require('packer.util')
 local plugin_configs = {}
 
 --- @param name string
+--- @return fun(err: string)
 local function config_error_handler(name)
   --- @param err string
   return function(err)

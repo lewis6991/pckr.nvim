@@ -302,7 +302,6 @@ local function checkout(plugin, disp)
 
   update_disp('fetching reference...')
 
-  --- @type string?
   local tag = plugin.tag
 
   -- Resolve tag
@@ -319,10 +318,11 @@ local function checkout(plugin, disp)
   local branch --- @type string?
   local checkout_args = {} --- @type string[]
 
-  if plugin.commit then
-    target = plugin.commit
+  local commit = plugin.commit
+
+  if commit then
+    target = commit
   elseif tag then
-    --- @type string
     target = 'tags/' .. tag
   else
     branch = plugin.branch or get_current_branch(plugin)
