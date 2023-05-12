@@ -118,17 +118,20 @@ local post_update_hook = a.sync(function(plugin, disp)
     return
   end
 
-  disp:task_update(plugin.name, 'running post update hooks...')
+  a.main()
 
-  for _, run_task in ipairs(plugin.run) do
-    if type(run_task) == "function" then
-      local ok, err = pcall(run_task, plugin, disp)
-      if not ok then
-        return { 'Error running post update hook: ' .. vim.inspect(err) }
-      end
-    elseif type(run_task) == 'string' and run_task:sub(1, 1) == ':' then
+  local run_task = plugin.run
+
+  if type(run_task) == 'function' then
+    disp:task_update(plugin.name, 'running post update hook...')
+    local ok, err = pcall(run_task, plugin, disp)
+    if not ok then
+      return { 'Error running post update hook: ' .. vim.inspect(err) }
+    end
+  elseif type(run_task) == 'string' then
+    disp:task_update(plugin.name, string.format('running post update hook...(\"%s\")', run_task))
+    if vim.startswith(run_task, ':') then
       -- Run a vim command
-      a.main()
       vim.cmd(run_task:sub(2))
     else
       local jobs = require('packer.jobs')
@@ -152,6 +155,8 @@ local install_task = a.sync(function(plugin, disp, installs)
 
   local err = plugin_type.installer(plugin, disp)
 
+  plugin.installed = vim.fn.isdirectory(plugin.install_path) ~= 0
+
   if not err then
     err = post_update_hook(plugin, disp)
   end
@@ -167,8 +172,6 @@ local install_task = a.sync(function(plugin, disp, installs)
     disp:task_failed(plugin.name, 'failed to install', err)
     log.fmt_debug('Failed to install %s: %s', plugin.name, vim.inspect(err))
   end
-
-  plugin.installed = vim.fn.isdirectory(plugin.install_path) ~= 0
 
   installs[plugin.name] = { err = err }
   return plugin.name, err

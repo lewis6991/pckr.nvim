@@ -12,7 +12,7 @@ local config = require('packer.config')
 --- @field commit     string
 --- @field start      boolean
 --- @field cond       boolean|PluginLoader|PluginLoader[]
---- @field run        string|function|(string|function)[]
+--- @field run?       fun()|string
 --- @field config_pre? fun()|string
 --- @field config?     fun()|string
 --- @field lock       boolean
@@ -25,7 +25,7 @@ local config = require('packer.config')
 --- @field commit       string
 --- @field install_path string
 --- @field cond         boolean|PluginLoader|PluginLoader[]
---- @field run          (string|fun())[]
+--- @field run?         fun()|string
 --- @field config_pre?  fun()
 --- @field config?      fun()
 --- @field requires     string[]
@@ -111,15 +111,6 @@ local function normspec(x)
   return type(x) == "string" and { x } or x
 end
 
---- @param x string | function | (string|function)[]
---- @return (string|function)[]
-local function normrun(x)
-  if type(x) == "function" or type(x) == "string" then
-    return { x }
-  end
-  return x
-end
-
 --- @param x string | fun()
 --- @return fun()
 local function normconfig(x)
@@ -194,7 +185,7 @@ function M.process_spec(spec0, required_by)
     start = spec.start,
     simple = simple,
     cond = spec.cond ~= true and spec.cond or nil,   -- must be function or 'false'
-    run = normrun(spec.run),
+    run = spec.run,
     lock = spec.lock,
     url = remove_ending_git_url(url),
     install_path = install_path,
@@ -219,8 +210,7 @@ function M.process_spec(spec0, required_by)
 
   if spec.requires then
     local sr = spec.requires
-    ---@type string[]
-    local r = type(sr) == "string" and { sr } or sr
+    local r = type(sr) == "string" and { sr } or sr --[[@as string[] ]]
 
     plugin.requires = {}
     for _, s in ipairs(r) do

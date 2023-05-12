@@ -263,7 +263,7 @@ Plugin specs can take two forms:
   lock = boolean,
 
   -- Post-update/install hook. See "update/install hooks".
-  run = string|function|table,
+  run = string|function,
 
   -- Specifies plugin dependencies. See "dependencies".
   requires = string|string[],
