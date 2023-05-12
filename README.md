@@ -82,7 +82,9 @@ require('packer').add{
   -- Also run code after load (see the "config" key)
   { 'w0rp/ale',
     cond = cmd('ALEEnable'),
-    config = 'vim.cmd[[ALEEnable]]'
+    config = function()
+      vim.cmd[[ALEEnable]]
+    end
   };
 
   -- Local plugins can be included
@@ -247,15 +249,36 @@ Plugin specs can take two forms:
   'myusername/example',    -- The plugin location string
 
   -- The following keys are all optional
-  branch     = string,                 -- Specifies a git branch to use
-  tag        = string,                 -- Specifies a git tag to use. Supports '*' for "latest tag"
-  commit     = string,                 -- Specifies a git commit to use
-  lock       = boolean,                -- Skip updating this plugin in updates/syncs. Still cleans.
-  run        = string|function|table,  -- Post-update/install hook. See "update/install hooks".
-  requires   = string|string[],        -- Specifies plugin dependencies. See "dependencies".
-  config_pre = string|function,        -- Specifies code to run before this plugin is loaded.
-  config     = string|function,        -- Specifies code to run after this plugin is loaded.
-  cond       = function|function[],    -- Specifies custom loader
+
+  -- Specifies a git branch to use
+  branch = string,
+
+  -- Specifies a git tag to use. Supports '*' for "latest tag"
+  tag = string,
+
+  -- Specifies a git commit to use
+  commit = string,
+
+  -- Skip updating this plugin in updates/syncs. Still cleans.
+  lock = boolean,
+
+  -- Post-update/install hook. See "update/install hooks".
+  run = string|function|table,
+
+  -- Specifies plugin dependencies. See "dependencies".
+  requires = string|string[],
+
+  -- Specifies code to run after this plugin is loaded. If string then require it.
+  -- E.g:
+  --   config = function() require('mod') end
+  -- is equivalent to:
+  --   config = 'mod'
+  config = string|function,
+
+  -- Specifies code to run before this plugin is loaded. If string then require it.
+  config_pre = string|function,
+
+  cond = function|function[],    -- Specifies custom loader
 }
 ```
 

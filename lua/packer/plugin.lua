@@ -13,8 +13,8 @@ local config = require('packer.config')
 --- @field start      boolean
 --- @field cond       boolean|Loader|Loader[]
 --- @field run        string|function|(string|function)[]
---- @field config_pre fun()
---- @field config     fun()
+--- @field config_pre? fun()|string
+--- @field config?     fun()|string
 --- @field lock       boolean
 --- @field requires   string|(string|UserSpec)[]
 
@@ -26,8 +26,8 @@ local config = require('packer.config')
 --- @field install_path string
 --- @field cond         boolean|Loader|Loader[]
 --- @field run          (string|fun())[]
---- @field config_pre   fun()
---- @field config       fun()
+--- @field config_pre?  fun()
+--- @field config?      fun()
 --- @field requires     string[]
 ---
 --- @field name         string
@@ -107,6 +107,7 @@ end
 --- @param x string | UserSpec
 --- @return UserSpec
 local function normspec(x)
+   --- @diagnostic disable-next-line:return-type-mismatch
    return type(x) == "string" and { x } or x
 end
 
@@ -115,6 +116,17 @@ end
 local function normrun(x)
    if type(x) == "function" or type(x) == "string" then
       return { x }
+   end
+   return x
+end
+
+--- @param x string | fun()
+--- @return fun()
+local function normconfig(x)
+   if type(x) == 'string' then
+      return function()
+         require(x)
+      end
    end
    return x
 end
@@ -189,8 +201,8 @@ function M.process_spec(spec0, required_by)
       install_path = install_path,
       installed = vim.fn.isdirectory(install_path) ~= 0,
       type = ptype,
-      config_pre = spec.config_pre,
-      config = spec.config,
+      config_pre = normconfig(spec.config_pre),
+      config = normconfig(spec.config),
       revs = {},
    }
 
