@@ -1,6 +1,8 @@
-# 🚧 WIP 🚧
+# pckr.nvim
 
-Packer v2 (new name TBD)
+Reimplementation of https://github.com/wbthomason/packer.nvim
+
+## 🚧 WIP 🚧
 
 Differences:
 - heavily refactored
