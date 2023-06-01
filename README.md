@@ -1,71 +1,80 @@
 # pckr.nvim
 
-Reimplementation of https://github.com/wbthomason/packer.nvim
+Spiritual successor of https://github.com/wbthomason/packer.nvim
 
 ## 🚧 WIP 🚧
 
-Differences:
-- heavily refactored
-- lockfile support
-- no compilation
+Main differences to pckr.nvim:
+- Heavily refactored
+- Lockfile support
+- No compilation
 
 ## Table of Contents
 1. [Features](#features)
 2. [Requirements](#requirements)
 3. [Quickstart](#quickstart)
-4. [Bootstrapping](#bootstrapping)
-5. [Usage](#usage)
+4. [Example](#example)
+5. [Commands](#commands)
+6. [Usage](#usage)
     1. [The setup and add functions](#the-setup-and-add-function)
     2. [Custom Initialization](#custom-initialization)
     3. [Specifying Plugins](#specifying-plugins)
     4. [Performing plugin management operations](#performing-plugin-management-operations)
-6. [Debugging](#debugging)
+7. [Debugging](#debugging)
 
 ## Features
 - Declarative plugin specification
 - Support for dependencies
-- Expressive configuration and lazy-loading options
 - Extensible
 - Post-install/update hooks
-- Async
 - Support for `git` tags, branches, revisions
 - Support for local plugins
+- Lockfile support
 
 ## Requirements
-- **You need to be running Neovim v0.8.0+**
+- **You need to be running Neovim v0.9.0+**
 - If you are on Windows 10, you need developer mode enabled in order to use local plugins (creating
   symbolic links requires admin privileges on Windows - credit to @TimUntersberger for this note)
 
 ## Quickstart
-To get started, first clone this repository to somewhere on your `packpath`, e.g.:
 
-> Unix, Linux Installation
+If you want to automatically install and set up `pckr.nvim` on any machine you clone your configuration to,
+add the following snippet somewhere in your config **before** your first usage of `pckr`:
 
-```bash
-git clone --depth 1 https://github.com/wbthomason/packer.nvim\
- ~/.local/share/nvim/site/pack/packer/start/packer.nvim
+```lua
+local function bootstrap_pckr()
+  local pckr_path = vim.fn.stdpath("data") .. "/pckr/pckr.nvim"
+
+  if not vim.loop.fs_stat(pckr_path) then
+    vim.fn.system({
+      'git',
+      'clone',
+      "--filter=blob:none",
+      'https://github.com/lewis6991/pckr.nvim',
+      pckr_path
+    })
+  end
+
+  vim.opt.rtp:prepend(pckr_path)
+end
+
+bootstrap_pckr()
+
+require('pckr').add{
+  -- My plugins here
+  -- 'foo1/bar1.nvim';
+  -- 'foo2/bar2.nvim';
+}
 ```
 
-If you use Arch Linux, there is also [an AUR package](https://aur.archlinux.org/packages/nvim-packer-git/).
-
-> Windows Powershell Installation
-
-```bash
-git clone https://github.com/wbthomason/packer.nvim "$env:LOCALAPPDATA\nvim-data\site\pack\packer\start\packer.nvim"
-```
-
-Then you can write your plugin specification in Lua, e.g. (in `~/.config/nvim/lua/plugins.lua`):
-
+## Example
 ```lua
 -- This file can be loaded by calling `lua require('plugins')` from your init.vim
 
-local cmd = require('packer.loader.cmd')
-local keys = require('packer.loader.keys')
+local cmd = require('pckr.loader.cmd')
+local keys = require('pckr.loader.keys')
 
-require('packer').add{
-  -- Packer can manage itself
-  'wbthomason/packer.nvim';
-
+require('pckr').add{
   -- Simple plugins can be specified as strings
   '9mm/vim-closer';
 
@@ -96,8 +105,7 @@ require('packer').add{
   {'iamcco/markdown-preview.nvim', run = 'cd app && yarn install', cond = cmd('MarkdownPreview')};
 
   -- Post-install/update hook with neovim command
-  -- Install plugin as a 'start' plugin
-  { 'nvim-treesitter/nvim-treesitter', run = ':TSUpdate', start = true };
+  { 'nvim-treesitter/nvim-treesitter', run = ':TSUpdate' };
 
   -- Post-install/update hook with call of vimscript function with argument
   { 'glacambre/firenvim', run = function()
@@ -116,126 +124,74 @@ require('packer').add{
   -- Run config *before* the plugin is loaded
   {'whatyouhide/vim-lengthmatters', config_pre = function()
     vim.g.lengthmatters_highlight_one_column = 1
-    vim.g.lengthmatters_excluded = {'packer'}
+    vim.g.lengthmatters_excluded = {'pckr'}
   end},
 }
 ```
 
-`packer` provides the following commands.
+## Commands
+`pckr` provides the following commands.
 
 ```vim
 " Remove any disabled or unused plugins
-:Packer clean
+:Pckr clean
 
 " Install missing plugins
-:Packer install
+:Pckr install
 
 " Update installed plugins
-:Packer update [plugin]
+:Pckr update [plugin]
 
 " Clean, fix, install then update
 " supports the `--preview` flag as an optional first argument to preview updates
-:Packer sync
+:Pckr sync
 
 " View status of plugins
-:Packer status
+:Pckr status
 
 " Create a lockfile of plugins with their current commits
-:Packer lock
+:Pckr lock
 
 " Restore plugins using saved lockfile
-:Packer restore
-```
-
-## Bootstrapping
-
-If you want to automatically install and set up `packer.nvim` on any machine you clone your configuration to,
-add the following snippet (which is due to @Iron-E and @khuedoan) somewhere in your config **before** your first usage of `packer`:
-
-```lua
-local function bootstrap_packer()
-  if not pcall(require, 'packer') then
-    if vim.fn.input("Download Packer? (y for yes): ") ~= "y" then
-      return
-    end
-
-    print("Downloading packer.nvim...")
-    print(fn.system{
-     'git',
-     'clone',
-     '--depth', '1',
-     'https://github.com/lewis6991/packer.nvim',
-     fn.stdpath('data')..'/site/pack/packer/start/packer.nvim'
-    })
-  end
-end
-
-bootstrap_packer()
-
-require('packer').add{
-  'lewis6991/packer.nvim';
-  -- My plugins here
-  -- 'foo1/bar1.nvim';
-  -- 'foo2/bar2.nvim';
-
-}
+:Pckr restore
 ```
 
 ## Usage
 
-The following is a more in-depth explanation of `packer`'s features and use.
+The following is a more in-depth explanation of `pckr`'s features and use.
 
 ### The `setup` and `add` functions
-`packer` provides`packer.add(spec)`, which is used in the above examples
+`pckr` provides`pckr.add(spec)`, which is used in the above examples
 where `spec` is a table specifying a single or multiple plugins.
 
 ### Custom Initialization
-`packer.setup()` can be used to provide custom configuration (note that this is optional).
+`pckr.setup()` can be used to provide custom configuration (note that this is optional).
 The default configuration values (and structure of the configuration table) are:
 
 ```lua
-require('packer').setup{
+require('pckr').setup{
   package_root        = util.join_paths(vim.fn.stdpath('data'), 'site', 'pack'),
-  plugin_package      = 'packer', -- The default package for plugins
   max_jobs            = nil, -- Limit the number of simultaneous jobs. nil means no limit
-  auto_clean          = true, -- During sync(), remove unused plugins
-  preview_updates     = false, -- If true, always preview updates before choosing which plugins to update, same as `PackerUpdate --preview`.
+  autoremove          = false, -- Remove unused plugins
+  autoinstall         = true, -- Auto install plugins
   git = {
     cmd = 'git', -- The base command for git operations
     depth = 1, -- Git clone depth
     clone_timeout = 60, -- Timeout, in seconds, for git clones
     default_url_format = 'https://github.com/%s' -- Lua format string used for "aaa/bbb" style plugins
   },
-  display = {
-    non_interactive = false, -- If true, disable display windows for all operations
-    working_sym     = '⟳', -- The symbol for a plugin being installed/updated
-    error_sym       = '✗', -- The symbol for a plugin with an error in installation/updating
-    done_sym        = '✓', -- The symbol for a plugin which has completed installation/updating
-    removed_sym     = '-', -- The symbol for an unused plugin which was removed
-    moved_sym       = '→', -- The symbol for a plugin which was moved (e.g. from opt to start)
-    header_sym      = '━', -- The symbol for the header line in packer's display
-    show_all_info   = true, -- Should packer show all update details automatically?
-    prompt_border   = 'double', -- Border style of prompt popups.
-    keybindings = { -- Keybindings for the display window
-      quit          = 'q',
-      toggle_update = 'u', -- only in preview
-      continue      = 'c', -- only in preview
-      toggle_info   = '<CR>',
-      diff          = 'd',
-      prompt_revert = 'r',
-    }
-  },
   log = { level = 'warn' }, -- The default print log level. One of: "trace", "debug", "info", "warn", "error", "fatal".
-  autoremove = false, -- Remove disabled or unused plugins without prompting the user
+  opt_dir = ...,
+  start_dir = ...,
   lockfile = {
-    path = util.join_paths(vim.fn.stdpath('config', 'packer', 'lockfile.lua'))
+    path = util.join_paths(vim.fn.stdpath('config', 'pckr', 'lockfile.lua'))
   }
 }
 ```
 
 ### Specifying plugins
 
-`packer` is based around declarative specification of plugins.
+`pckr` is based around declarative specification of plugins.
 
 1. Absolute paths to a local plugin
 2. Full URLs (treated as plugins managed with `git`)
@@ -253,34 +209,34 @@ Plugin specs can take two forms:
   -- The following keys are all optional
 
   -- Specifies a git branch to use
-  branch = string,
+  branch: string?,
 
   -- Specifies a git tag to use. Supports '*' for "latest tag"
-  tag = string,
+  tag: string?,
 
   -- Specifies a git commit to use
-  commit = string,
+  commit: string?,
 
   -- Skip updating this plugin in updates/syncs. Still cleans.
-  lock = boolean,
+  lock: boolean?,
 
   -- Post-update/install hook. See "update/install hooks".
-  run = string|function,
+  run: string|function,
 
   -- Specifies plugin dependencies. See "dependencies".
-  requires = string|string[],
+  requires: string|string[],
 
   -- Specifies code to run after this plugin is loaded. If string then require it.
   -- E.g:
   --   config = function() require('mod') end
   -- is equivalent to:
   --   config = 'mod'
-  config = string|function,
+  config: string|function,
 
   -- Specifies code to run before this plugin is loaded. If string then require it.
-  config_pre = string|function,
+  config_pre: string|function,
 
-  cond = function|function[],    -- Specifies custom loader
+  cond: function|function[],    -- Specifies custom loader
 }
 ```
 
@@ -321,7 +277,7 @@ When this function argument is called, the plugin is loaded.
 For example, the following plugin is lazy-loaded on the key mapping `ga`:
 
 ```lua
-packer.add{
+pckr.add{
   {"my/plugin", cond = function(load_plugin)
     vim.keymap.set('n', 'ga', function()
       vim.keymap.del('n', 'ga')
@@ -333,8 +289,8 @@ packer.add{
 
   -- equivalent to --
 
-local keys = require('packer.loader.keys')
-packer.add{
+local keys = require('pckr.loader.keys')
+pckr.add{
   {"my/plugin", cond = keys('n', 'ga') },
 }
 ```
@@ -346,16 +302,16 @@ packer.add{
 > API here will be similar to what it was before with the only exception being the
 > final argument to every command will be a callback which is called when the operation finishes.
 
-`packer` exposes the following functions for common plugin management operations. In all of the
+`pckr` exposes the following functions for common plugin management operations. In all of the
 below, `plugins` is an optional table of plugin names; if not provided, the default is "all managed
 plugins":
 
-- `packer.install(plugins)`: Install the specified plugins if they are not already installed
-- `packer.update(plugins)`: Update the specified plugins, installing any that are missing
-- `packer.update(opts, plugins)`: First argument can be a table specifying options, such as `{preview_updates = true}` to preview potential changes before updating (same as `PackerUpdate --preview`).
-- `packer.clean()`: Remove any disabled or no longer managed plugins
+- `pckr.install(plugins)`: Install the specified plugins if they are not already installed
+- `pckr.update(plugins)`: Update the specified plugins, installing any that are missing
+- `pckr.update(opts, plugins)`: First argument can be a table specifying options, such as `{preview_updates = true}` to preview potential changes before updating (same as `PckrUpdate --preview`).
+- `pckr.clean()`: Remove any disabled or no longer managed plugins
 
 ## Debugging
-`packer.nvim` logs to `stdpath(cache)/packer.nvim.log`. Looking at this file is usually a good start
+`pckr.nvim` logs to `stdpath(cache)/pckr.nvim.log`. Looking at this file is usually a good start
 if something isn't working as expected.
 

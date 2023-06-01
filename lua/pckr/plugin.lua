@@ -1,6 +1,6 @@
-local util = require('packer.util')
-local log = require('packer.log')
-local config = require('packer.config')
+local util = require('pckr.util')
+local log = require('pckr.log')
+local config = require('pckr.config')
 
 --- @alias PluginLoader fun(function)
 

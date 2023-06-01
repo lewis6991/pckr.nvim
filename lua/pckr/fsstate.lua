@@ -1,7 +1,7 @@
-local a = require('packer.async')
-local util = require('packer.util')
-local log = require('packer.log')
-local config = require('packer.config')
+local a = require('pckr.async')
+local util = require('pckr.util')
+local log = require('pckr.log')
+local config = require('pckr.config')
 
 local fn = vim.fn
 local uv = vim.loop
@@ -104,7 +104,7 @@ local find_dirty_plugins = a.sync(function(plugins, opt_plugins, start_plugins)
       if plugin.type ~= guessed_type then
         dirty_plugins[plugin.install_path] = plugin_name
       elseif guessed_type == 'git' then
-        local remote = require('packer.plugin_types.git').remote_url(plugin)
+        local remote = require('pckr.plugin_types.git').remote_url(plugin)
         if remote then
           -- Form a Github-style user/repo string
           local parts = vim.split(remote, '[:/]')

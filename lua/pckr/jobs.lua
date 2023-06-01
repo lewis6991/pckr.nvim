@@ -1,7 +1,7 @@
 -- Interface with Neovim job control and provide a simple job sequencing structure
 local uv = vim.loop
-local a = require('packer.async')
-local log = require('packer.log')
+local a = require('pckr.async')
+local log = require('pckr.log')
 
 local M = {JobResult = {}, Opts = {}, }
 

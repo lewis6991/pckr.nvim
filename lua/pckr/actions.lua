@@ -1,15 +1,15 @@
 local fn = vim.fn
 local fmt = string.format
 
-local a = require('packer.async')
-local config = require('packer.config')
-local log = require('packer.log')
-local util = require('packer.util')
-local fsstate = require('packer.fsstate')
+local a = require('pckr.async')
+local config = require('pckr.config')
+local log = require('pckr.log')
+local util = require('pckr.util')
+local fsstate = require('pckr.fsstate')
 
-local display = require('packer.display')
+local display = require('pckr.display')
 
-local packer_plugins = require('packer.plugin').plugins
+local pckr_plugins = require('pckr.plugin').plugins
 
 local M = {}
 
@@ -22,11 +22,11 @@ local M = {}
 local function open_display()
   return display.open({
     diff = function(plugin, commit, callback)
-      local plugin_type = require('packer.plugin_types')[plugin.type]
+      local plugin_type = require('pckr.plugin_types')[plugin.type]
       plugin_type.diff(plugin, commit, callback)
     end,
     revert_last = function(plugin)
-      local plugin_type = require('packer.plugin_types')[plugin.type]
+      local plugin_type = require('pckr.plugin_types')[plugin.type]
       plugin_type.revert_last(plugin)
     end,
   })
@@ -91,7 +91,7 @@ local function update_helptags(results)
   local paths = {} --- @type string[]
   for plugin_name, r in pairs(results) do
     if not r.err then
-      paths[#paths + 1] = packer_plugins[plugin_name].install_path
+      paths[#paths + 1] = pckr_plugins[plugin_name].install_path
     end
   end
 
@@ -110,7 +110,7 @@ end
 local post_update_hook = a.sync(function(plugin, disp)
   if plugin.run or plugin.start then
     a.main()
-    local loader = require('packer.loader')
+    local loader = require('pckr.loader')
     loader.load_plugin(plugin)
   end
 
@@ -134,7 +134,7 @@ local post_update_hook = a.sync(function(plugin, disp)
       -- Run a vim command
       vim.cmd(run_task:sub(2))
     else
-      local jobs = require('packer.jobs')
+      local jobs = require('pckr.jobs')
       local jr = jobs.run(run_task, { cwd = plugin.install_path })
 
       if jr.exit_code ~= 0 then
@@ -151,7 +151,7 @@ end, 2)
 local install_task = a.sync(function(plugin, disp, installs)
   disp:task_start(plugin.name, 'installing...')
 
-  local plugin_type = require('packer.plugin_types')[plugin.type]
+  local plugin_type = require('pckr.plugin_types')[plugin.type]
 
   local err = plugin_type.installer(plugin, disp)
 
@@ -188,7 +188,7 @@ local function get_install_tasks(missing_plugins, disp, installs)
 
   local tasks = {} --- @type (fun(function))[]
   for _, v in ipairs(missing_plugins) do
-    tasks[#tasks + 1] = a.curry(install_task, packer_plugins[v], disp, installs)
+    tasks[#tasks + 1] = a.curry(install_task, pckr_plugins[v], disp, installs)
   end
 
   return tasks
@@ -237,7 +237,7 @@ local update_task = a.sync(function(plugin, disp, updates)
     return
   end
 
-  local plugin_type = require('packer.plugin_types')[plugin.type]
+  local plugin_type = require('pckr.plugin_types')[plugin.type]
   local actual_update = false
 
   plugin.err = plugin_type.updater(plugin, disp)
@@ -285,7 +285,7 @@ end, 3)
 local function get_update_tasks(update_plugins, disp, updates)
   local tasks = {} --- @type (fun(function))[]
   for _, v in ipairs(update_plugins) do
-    local plugin = packer_plugins[v]
+    local plugin = pckr_plugins[v]
     if not plugin then
       log.fmt_error('Unknown plugin: %s', v)
     end
@@ -371,7 +371,7 @@ end, 4)
 --- @param __cb fun()
 M.install = a.sync(function(install_plugins, _opts, __cb)
   if not install_plugins then
-    local fs_state = fsstate.get_fs_state(packer_plugins)
+    local fs_state = fsstate.get_fs_state(pckr_plugins)
     install_plugins = vim.tbl_values(fs_state.missing)
   end
 
@@ -405,9 +405,9 @@ end, 2)
 --- @param update_plugins string[]
 M.update = a.void(function(update_plugins)
   if #update_plugins == 0 then
-    update_plugins = vim.tbl_keys(packer_plugins)
+    update_plugins = vim.tbl_keys(pckr_plugins)
   end
-  local fs_state = fsstate.get_fs_state(packer_plugins)
+  local fs_state = fsstate.get_fs_state(pckr_plugins)
   local _, installed_plugins = util.partition(vim.tbl_values(fs_state.missing), update_plugins)
 
   local updates = {}
@@ -438,9 +438,9 @@ end)
 --- @param update_plugins string[]
 M.sync = a.void(function(update_plugins)
   if #update_plugins == 0 then
-    update_plugins = vim.tbl_keys(packer_plugins)
+    update_plugins = vim.tbl_keys(pckr_plugins)
   end
-  local fs_state = fsstate.get_fs_state(packer_plugins)
+  local fs_state = fsstate.get_fs_state(pckr_plugins)
 
   local extra_plugins = util.partition(vim.tbl_values(fs_state.extra), update_plugins)
 
@@ -451,13 +451,13 @@ M.sync = a.void(function(update_plugins)
     updates = {},
   }
 
-  fix_plugin_types(packer_plugins, extra_plugins, results.moves, fs_state)
+  fix_plugin_types(pckr_plugins, extra_plugins, results.moves, fs_state)
 
   -- Even though we may have moved some dirty plugins, they may still be dirty
   -- for a different reason so recalculate fs_state
-  fs_state = fsstate.get_fs_state(packer_plugins)
+  fs_state = fsstate.get_fs_state(pckr_plugins)
 
-  do_clean(packer_plugins, fs_state, results.removals)
+  do_clean(pckr_plugins, fs_state, results.removals)
 
   local missing_plugins, installed_plugins = util.partition(vim.tbl_values(fs_state.missing), update_plugins)
 
@@ -486,21 +486,21 @@ M.sync = a.void(function(update_plugins)
 end)
 
 M.status = a.sync(function(_, _)
-  require('packer.status').run()
+  require('pckr.status').run()
 end, 2)
 
 --- Clean operation:
--- Finds plugins present in the `packer` package but not in the managed set
+-- Finds plugins present in the `pckr` package but not in the managed set
 M.clean = a.void(function(_, _)
-  do_clean(packer_plugins)
+  do_clean(pckr_plugins)
 end)
 
 M.lock = a.sync(function(_, _)
-  require('packer.lockfile').lock()
+  require('pckr.lockfile').lock()
 end, 2)
 
 M.restore = a.sync(function(_, _)
-  require('packer.lockfile').restore()
+  require('pckr.lockfile').restore()
 end, 2)
 
 return M

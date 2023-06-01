@@ -1,19 +1,19 @@
-local log = require('packer.log')
+local log = require('pckr.log')
 
 local M = {}
 
 --- @return string[]
 local function command_complete()
-  local actions = require('packer.actions')
+  local actions = require('pckr.actions')
   return vim.tbl_keys(actions)
 end
 
 -- Completion user plugins
--- Intended to provide completion for PackerUpdate/Sync/Install command
+-- Intended to provide completion for PckrUpdate/Sync/Install command
 --- @param lead string
 --- @return string[]
 local function plugin_complete(lead, _)
-  local plugins = require('packer.plugin').plugins
+  local plugins = require('pckr.plugin').plugins
   local completion_list = vim.tbl_filter(
     --- @param name string
     --- @return boolean
@@ -68,7 +68,7 @@ function M.run(params)
     log.error('No subcommand provided')
   end
 
-  local actions = require('packer.actions')
+  local actions = require('pckr.actions')
 
   --- @type function?
   local cmd_func = actions[func]

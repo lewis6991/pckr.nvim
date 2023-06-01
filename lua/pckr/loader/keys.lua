@@ -13,7 +13,7 @@ return function(mode, key)
             vim.api.nvim_feedkeys(key, mode, false)
          end
       end, {
-         desc = 'packer.nvim lazy load',
+         desc = 'pckr.nvim lazy load',
          silent = true,
       })
   end

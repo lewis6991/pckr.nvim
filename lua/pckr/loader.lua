@@ -1,5 +1,5 @@
-local log = require('packer.log')
-local util = require('packer.util')
+local log = require('pckr.log')
+local util = require('pckr.util')
 
 --- @type fun()[]
 local plugin_configs = {}
@@ -114,7 +114,7 @@ function M.load_plugin(plugin)
 
   if plugin.requires then
     log.fmt_debug('Loading dependencies of %s', plugin.name)
-    local all_plugins = require('packer.plugin').plugins
+    local all_plugins = require('pckr.plugin').plugins
 
     for _, name in ipairs(plugin.requires) do
       M.load_plugin(all_plugins[name])

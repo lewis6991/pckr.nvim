@@ -1,7 +1,7 @@
 local fmt = string.format
-local a = require('packer.async')
-local log = require('packer.log')
-local display = require('packer.display')
+local a = require('pckr.async')
+local log = require('pckr.log')
+local display = require('pckr.display')
 
 local M = {}
 
@@ -80,7 +80,7 @@ local function add_profile_data(plugin)
   local total_exec_time = 0
   local total_load_time = 0
 
-  local path_times = require('packer.loader').path_times
+  local path_times = require('pckr.loader').path_times
   for p, d in pairs(path_times) do
     if vim.startswith(p, plugin.install_path .. '/') then
       plugin.plugin_times = plugin.plugin_times or {}
@@ -135,9 +135,9 @@ local function load_state(plugin)
 end
 
 M.run = a.sync(function()
-  local plugins = require('packer.plugin').plugins
+  local plugins = require('pckr.plugin').plugins
   if plugins == nil then
-    log.warn('packer_plugins table is nil! Cannot run packer.status()!')
+    log.warn('pckr_plugins table is nil! Cannot run pckr.status()!')
     return
   end
 

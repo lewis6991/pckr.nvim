@@ -1,4 +1,4 @@
-local packer_config = require('packer.config').log
+local pckr_config = require('pckr.config').log
 
 local start_time = vim.loop.hrtime()
 
@@ -97,7 +97,7 @@ end
 
 local config = vim.deepcopy(default_config)
 
-config.level = packer_config.level
+config.level = pckr_config.level
 
 local min_active_level = level_ids[config.level]
 if min_active_level then
@@ -108,7 +108,7 @@ end
 
 local cache_dir = vim.fn.stdpath('cache')
 
-local outfile = string.format('%s/packer.nvim.log', cache_dir)
+local outfile = string.format('%s/pckr.nvim.log', cache_dir)
 vim.fn.mkdir(cache_dir, 'p')
 
 --- @type table<LogLevel,integer>
@@ -137,9 +137,9 @@ local function log_at_level_console(level_config, message_maker, ...)
     -- Heuristic to check for nvim-notify
     local is_fancy_notify = type(vim.notify) == 'table'
     vim.notify(
-      string.format([[%s%s]], is_fancy_notify and '' or ('[packer.nvim'), console_string),
+      string.format([[%s%s]], is_fancy_notify and '' or ('[pckr.nvim'), console_string),
       vim.log.levels[level_config.name:upper()],
-      { title = 'packer.nvim' })
+      { title = 'pckr.nvim' })
   end)
 end
 

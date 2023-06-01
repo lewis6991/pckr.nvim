@@ -1,15 +1,15 @@
 local api = vim.api
-local log = require('packer.log')
-local config = require('packer.config')
-local awrap = require('packer.async').wrap
-local packer_plugins = require('packer.plugin').plugins
+local log = require('pckr.log')
+local config = require('pckr.config')
+local awrap = require('pckr.async').wrap
+local pckr_plugins = require('pckr.plugin').plugins
 local fmt = string.format
 
-local ns = api.nvim_create_namespace('packer_display')
+local ns = api.nvim_create_namespace('pckr_display')
 
 local HEADER_LINES = 2
 
-local TITLE = 'packer.nvim'
+local TITLE = 'pckr.nvim'
 
 --- @alias Status
 --- | 'running'
@@ -118,7 +118,7 @@ local function diff(disp)
     return
   end
 
-  local plugin = packer_plugins[plugin_name]
+  local plugin = pckr_plugins[plugin_name]
 
   if not plugin then
     log.warn('Plugin not available!')
@@ -382,7 +382,7 @@ local function prompt_revert(disp)
     return
   end
 
-  local plugin = packer_plugins[plugin_name]
+  local plugin = pckr_plugins[plugin_name]
   local actual_update = plugin.revs[1] ~= plugin.revs[2]
   if actual_update then
     prompt_user('Revert update for ' .. plugin_name .. '?', {
@@ -621,14 +621,14 @@ Display.finish = vim.schedule_wrap(function(self, time)
   self:update_headline_message(fmt('finished in %.3fs', time))
 
   for plugin_name, _ in pairs(self.items) do
-    local plugin = packer_plugins[plugin_name]
+    local plugin = pckr_plugins[plugin_name]
     if not plugin then
-      log.fmt_warn('%s is not in packer_plugins', plugin_name)
+      log.fmt_warn('%s is not in pckr_plugins', plugin_name)
     elseif plugin.breaking_commits and #plugin.breaking_commits > 0 then
-      vim.cmd('syntax match packerBreakingChange "' .. plugin_name .. '" containedin=packerStatusSuccess')
+      vim.cmd('syntax match pckrBreakingChange "' .. plugin_name .. '" containedin=pckrStatusSuccess')
       for _, commit_hash in ipairs(plugin.breaking_commits) do
         log.fmt_warn('Potential breaking change in commit %s of %s', commit_hash, plugin_name)
-        vim.cmd('syntax match packerBreakingChange "' .. commit_hash .. '" containedin=packerHash')
+        vim.cmd('syntax match pckrBreakingChange "' .. commit_hash .. '" containedin=pckrHash')
       end
     end
   end
@@ -649,32 +649,32 @@ local function make_filetype_cmds(working_sym, done_sym, error_sym)
   return {
     'setlocal nolist nowrap nospell nonumber norelativenumber nofoldenable signcolumn=no',
     'syntax clear',
-    'syn match packerWorking /^ ' .. working_sym .. '/',
-    'syn match packerSuccess /^ ' .. done_sym .. '/',
-    'syn match packerFail /^ ' .. error_sym .. '/',
-    'syn match packerStatus /^+.*—\\zs\\s.*$/',
-    'syn match packerStatusSuccess /' .. look_back('^ ' .. done_sym) .. '\\s.*$/',
-    'syn match packerStatusFail /' .. look_back('^ ' .. error_sym) .. '\\s.*$/',
-    'syn match packerStatusCommit /^\\*.*—\\zs\\s.*$/',
-    'syn match packerHash /\\(\\s\\)[0-9a-f]\\{7,8}\\(\\s\\)/',
-    'syn match packerRelDate /([^)]*)$/',
-    'syn match packerProgress /\\[\\zs[\\=]*/',
-    'syn match packerOutput /\\(Output:\\)\\|\\(Commits:\\)\\|\\(Errors:\\)/',
-    [[syn match packerTimeHigh /\d\{3\}\.\d\+ms/]],
-    [[syn match packerTimeMedium /\d\{2\}\.\d\+ms/]],
-    [[syn match packerTimeLow /\d\.\d\+ms/]],
-    [[syn match packerTimeTrivial /0\.\d\+ms/]],
-    [[syn match packerPackageNotLoaded /(not loaded)$/]],
-    [[syn match packerString /\v(''|""|(['"]).{-}[^\\]\2)/]],
-    [[syn match packerBool /\<\(false\|true\)\>/]],
-    [[syn match packerPackageName /^\ • \zs[^ ]*/]],
-    'hi def link packerWorking        SpecialKey',
-    'hi def link packerSuccess        Question',
-    'hi def link packerFail           ErrorMsg',
-    'hi def link packerHash           Identifier',
-    'hi def link packerRelDate        Comment',
-    'hi def link packerProgress       Boolean',
-    'hi def link packerOutput         Type',
+    'syn match pckrWorking /^ ' .. working_sym .. '/',
+    'syn match pckrSuccess /^ ' .. done_sym .. '/',
+    'syn match pckrFail /^ ' .. error_sym .. '/',
+    'syn match pckrStatus /^+.*—\\zs\\s.*$/',
+    'syn match pckrStatusSuccess /' .. look_back('^ ' .. done_sym) .. '\\s.*$/',
+    'syn match pckrStatusFail /' .. look_back('^ ' .. error_sym) .. '\\s.*$/',
+    'syn match pckrStatusCommit /^\\*.*—\\zs\\s.*$/',
+    'syn match pckrHash /\\(\\s\\)[0-9a-f]\\{7,8}\\(\\s\\)/',
+    'syn match pckrRelDate /([^)]*)$/',
+    'syn match pckrProgress /\\[\\zs[\\=]*/',
+    'syn match pckrOutput /\\(Output:\\)\\|\\(Commits:\\)\\|\\(Errors:\\)/',
+    [[syn match pckrTimeHigh /\d\{3\}\.\d\+ms/]],
+    [[syn match pckrTimeMedium /\d\{2\}\.\d\+ms/]],
+    [[syn match pckrTimeLow /\d\.\d\+ms/]],
+    [[syn match pckrTimeTrivial /0\.\d\+ms/]],
+    [[syn match pckrPackageNotLoaded /(not loaded)$/]],
+    [[syn match pckrString /\v(''|""|(['"]).{-}[^\\]\2)/]],
+    [[syn match pckrBool /\<\(false\|true\)\>/]],
+    [[syn match pckrPackageName /^\ • \zs[^ ]*/]],
+    'hi def link pckrWorking        SpecialKey',
+    'hi def link pckrSuccess        Question',
+    'hi def link pckrFail           ErrorMsg',
+    'hi def link pckrHash           Identifier',
+    'hi def link pckrRelDate        Comment',
+    'hi def link pckrProgress       Boolean',
+    'hi def link pckrOutput         Type',
   }
 end
 
@@ -703,8 +703,8 @@ end
 --- Initialize options, settings, and keymaps for display windows
 --- @param bufnr integer
 local function setup_display_buf(bufnr)
-  vim.bo[bufnr].filetype = 'packer'
-  api.nvim_buf_set_name(bufnr, '[packer]')
+  vim.bo[bufnr].filetype = 'pckr'
+  api.nvim_buf_set_name(bufnr, '[pckr]')
   set_config_keymaps()
   for _, m in pairs(keymaps) do
     local lhs = m.lhs
@@ -715,7 +715,7 @@ local function setup_display_buf(bufnr)
     for _, x in ipairs(lhs) do
       vim.keymap.set('n', x, m.rhs, {
         --- @type string
-        desc = 'Packer: ' .. m.action,
+        desc = 'Pckr: ' .. m.action,
         buffer = bufnr,
         nowait = true,
         silent = true,
@@ -734,15 +734,15 @@ local function setup_display_buf(bufnr)
   end
 
   for _, c in ipairs({
-    { 'packerStatus', 'Type' },
-    { 'packerStatusCommit', 'Constant' },
-    { 'packerStatusSuccess', 'Constant' },
-    { 'packerStatusFail', 'ErrorMsg' },
-    { 'packerPackageName', 'Title' },
-    { 'packerPackageNotLoaded', 'Comment' },
-    { 'packerString', 'String' },
-    { 'packerBool', 'Boolean' },
-    { 'packerBreakingChange', 'WarningMsg' },
+    { 'pckrStatus', 'Type' },
+    { 'pckrStatusCommit', 'Constant' },
+    { 'pckrStatusSuccess', 'Constant' },
+    { 'pckrStatusFail', 'ErrorMsg' },
+    { 'pckrPackageName', 'Title' },
+    { 'pckrPackageNotLoaded', 'Comment' },
+    { 'pckrString', 'String' },
+    { 'pckrBool', 'Boolean' },
+    { 'pckrBreakingChange', 'WarningMsg' },
   }) do
     api.nvim_set_hl(0, c[1], { link = c[2], default = true })
   end

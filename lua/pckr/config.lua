@@ -1,4 +1,4 @@
-local util = require('packer.util')
+local util = require('pckr.util')
 
 local join_paths = util.join_paths
 
@@ -40,7 +40,6 @@ local join_paths = util.join_paths
 --- @field max_jobs     integer?
 --- @field start_dir    string
 --- @field opt_dir      string
---- @field auto_clean   boolean
 --- @field autoremove   boolean
 --- @field autoinstall  boolean
 --- @field display      Display
@@ -52,7 +51,6 @@ local join_paths = util.join_paths
 local default_config = {
    package_root = join_paths(vim.fn.stdpath('data'), 'site', 'pack'),
    max_jobs = nil,
-   auto_clean = true,
    git = {
       cmd = 'git',
       depth = 1,
@@ -78,7 +76,7 @@ local default_config = {
    },
    log = { level = 'info' },
    lockfile = {
-      path = util.join_paths(vim.fn.stdpath('config'), 'packer', 'lockfile.lua'),
+      path = util.join_paths(vim.fn.stdpath('config'), 'pckr', 'lockfile.lua'),
    },
    autoremove = false,
    autoinstall = true,
@@ -92,7 +90,7 @@ local function set(_, user_config)
    config = vim.tbl_deep_extend('force', config, user_config or {})
    config.package_root = vim.fn.fnamemodify(config.package_root, ':p')
    config.package_root = config.package_root:gsub(util.get_separator() .. '$', '', 1)
-   config.pack_dir = join_paths(config.package_root, 'packer')
+   config.pack_dir = join_paths(config.package_root, 'pckr')
    config.opt_dir = join_paths(config.pack_dir, 'opt')
    config.start_dir = join_paths(config.pack_dir, 'start')
 

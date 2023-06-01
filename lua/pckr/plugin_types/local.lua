@@ -1,6 +1,6 @@
-local a = require('packer.async')
-local log = require('packer.log')
-local util = require('packer.util')
+local a = require('pckr.async')
+local log = require('pckr.log')
+local util = require('pckr.util')
 
 local uv = vim.loop
 

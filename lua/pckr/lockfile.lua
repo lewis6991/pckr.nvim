@@ -1,11 +1,11 @@
 local fmt = string.format
 
-local a = require('packer.async')
-local config = require('packer.config')
-local log = require('packer.log')
-local P = require('packer.plugin')
-local plugin_types = require('packer.plugin_types')
-local display = require('packer.display')
+local a = require('pckr.async')
+local config = require('pckr.config')
+local log = require('pckr.log')
+local P = require('pckr.plugin')
+local plugin_types = require('pckr.plugin_types')
+local display = require('pckr.display')
 
 local M = {}
 
@@ -101,7 +101,7 @@ local restore_plugin = a.sync(function(plugin, disp, commit)
     return
   end
 
-  local plugin_type = require('packer.plugin_types')[plugin.type]
+  local plugin_type = require('pckr.plugin_types')[plugin.type]
 
   local rev = plugin_type.get_rev(plugin)
   if commit == rev then

@@ -1,15 +1,15 @@
 
 vim.api.nvim_create_user_command(
-  'Packer',
+  'Pckr',
   function(args)
-    return require('packer.cli').run(args)
+    return require('pckr.cli').run(args)
   end, {
     nargs = '*',
     complete = function(arglead, line)
-      return require('packer.cli').complete(arglead, line)
+      return require('pckr.cli').complete(arglead, line)
     end
   }
 )
 
 -- Run 'config' keys in user spec.
-require'packer.loader'.run_configs()
+require'pckr.loader'.run_configs()

@@ -1,9 +1,9 @@
 local api = vim.api
 
-local log = require('packer.log')
-local config = require('packer.config')
-local plugin = require('packer.plugin')
-local loader = require('packer.loader')
+local log = require('pckr.log')
+local config = require('pckr.config')
+local plugin = require('pckr.plugin')
+local loader = require('pckr.loader')
 
 local did_setup = false
 
@@ -49,7 +49,7 @@ function M.add(spec)
 
   if #to_install > 0 then
     local cwin = api.nvim_get_current_win()
-    require('packer.actions').install(to_install, nil, function()
+    require('pckr.actions').install(to_install, nil, function()
       -- Run loader in initial window so window options set properly
       api.nvim_win_call(cwin, load_plugins)
     end)

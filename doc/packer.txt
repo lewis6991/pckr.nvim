@@ -1,24 +1,25 @@
 
-*packer.nvim*
+*pckr.nvim*
 
-Author: Wil Thomason <wil.thomason@gmail.com>
+Author: Lewis Russell <lewis6991@gmail.com>
+Credit: Wil Thomason <wil.thomason@gmail.com>
 
-CONTENTS                                        *packer-contents*
-Introduction                                    |packer-introduction|
-  Features                                      |packer-intro-features|
-  Requirements                                  |packer-intro-requirements|
-  Quickstart                                    |packer-intro-quickstart|
-Usage                                           |packer-usage|
-API                                             |packer-api|
+CONTENTS                                        *pckr-contents*
+Introduction                                    |pckr-introduction|
+  Features                                      |pckr-intro-features|
+  Requirements                                  |pckr-intro-requirements|
+  Quickstart                                    |pckr-intro-quickstart|
+Usage                                           |pckr-usage|
+API                                             |pckr-api|
 ==============================================================================
-INTRODUCTION                                    *packer-introduction*
+INTRODUCTION                                    *pckr-introduction*
 
 This is a Neovim plugin manager. It is written in Lua, uses the native
 |packages| feature, and has features for declarative plugin configuration
 inspired by the `use-package` library from Emacs.
 
 ==============================================================================
-REQUIREMENTS                                     *packer-intro-requirements*
+REQUIREMENTS                                     *pckr-intro-requirements*
 
 - You need to be running Neovim v0.7.0+
 - If you are on Windows 10, you need developer mode enabled in order to use
@@ -26,7 +27,7 @@ REQUIREMENTS                                     *packer-intro-requirements*
   - credit to @TimUntersberger for this note)
 
 ==============================================================================
-FEATURES                                         *packer-intro-features*
+FEATURES                                         *pckr-intro-features*
 
 - Declarative plugin specification
 - Support for dependencies
@@ -40,21 +41,21 @@ FEATURES                                         *packer-intro-features*
 - Support for local plugins
 
 ==============================================================================
-QUICKSTART                                       *packer-intro-quickstart*
+QUICKSTART                                       *pckr-intro-quickstart*
 
 To get started, first clone this repository to somewhere on your `packpath`, e.g.: >bash
-  git clone https://github.com/wbthomason/packer.nvim\
-   ~/.local/share/nvim/site/pack/packer/opt/packer.nvim
+  git clone https://github.com/wbthomason/pckr.nvim\
+   ~/.local/share/nvim/site/pack/pckr/opt/pckr.nvim
 
 
 Then you can write your plugin specification in Lua, e.g. (in `~/.config/nvim/lua/plugins.lua`): >lua
 
-  local cmd = require('packer.loader.cmd')
-  local keys = require('packer.loader.keys')
+  local cmd = require('pckr.loader.cmd')
+  local keys = require('pckr.loader.keys')
 
-  require('packer').add{
-    -- Packer can manage itself
-    'wbthomason/packer.nvim';
+  require('pckr').add{
+    -- pckr can manage itself
+    'wbthomason/pckr.nvim';
 
     -- Simple plugins can be specified as strings
     '9mm/vim-closer';
@@ -104,69 +105,68 @@ Then you can write your plugin specification in Lua, e.g. (in `~/.config/nvim/lu
     -- Run config *before* the plugin is loaded
     {'whatyouhide/vim-lengthmatters', config_pre = function()
       vim.g.lengthmatters_highlight_one_column = 1
-      vim.g.lengthmatters_excluded = {'packer'}
+      vim.g.lengthmatters_excluded = {'pckr'}
     end},
   }
 
 
-`packer` provides the following commands: *packer-default-commands* *packer-commands*
+`pckr` provides the following commands: *pckr-default-commands* *pckr-commands*
 
-`Packer clean`                                          *packer-commands-clean*
+`Pckr clean`                                          *pckr-commands-clean*
 Remove any disabled or unused plugins.
 
-`Packer install`                                      *packer-commands-install*
+`Pckr install`                                      *pckr-commands-install*
 Clean, then install missing plugins.
 
-`Packer update`                                        *packer-commands-update*
+`Pckr update`                                        *pckr-commands-update*
 Update installed plugins.
 Supports the `--preview` flag as an optional first argument to preview
 updates.
 
-`Packer sync`                                            *packer-commands-sync*
+`Pckr sync`                                            *pckr-commands-sync*
 Clean, then update and install plugins.
 Supports the `--preview` flag as an optional first argument to preview
 updates.
 
-`Packer lock`                                            *packer-commands-sync*
+`Pckr lock`                                            *pckr-commands-sync*
 TODO
 
-`Packer restore`                                      *packer-commands-restore*
+`Pckr restore`                                      *pckr-commands-restore*
 TODO
 
 ==============================================================================
-USAGE                                          *packer-usage*
+USAGE                                          *pckr-usage*
 
-Although the example in |packer-intro-quickstart| will be enough to get you
-going for basic usage, `packer` has a number of other features and options
+Although the example in |pckr-intro-quickstart| will be enough to get you
+going for basic usage, `pckr` has a number of other features and options
 detailed in this section.
 
-STARTUP                                        *packer-startup*
+STARTUP                                        *pckr-startup*
 
-The easiest way to use `packer` is via the |packer.add()| function.
+The easiest way to use `pckr` is via the |pckr.add()| function.
 `spec` should be a table containing a list of plugin specs: >lua
 
-  packer.add{
+  pckr.add{
     {'tjdevries/colorbuddy.vim', config = function() ... end}
   }
 
 <
 
-Configuration can be provided via |packer.setup()|: >lua
+Configuration can be provided via |pckr.setup()|: >lua
 
-  packer.setup{
+  pckr.setup{
     -- YOUR CONFIG HERE --
   }
 
-See |packer-configuration| for the allowed configuration keys.
+See |pckr-configuration| for the allowed configuration keys.
 
 
-CONFIGURATION                                  *packer-configuration*
-`packer` provides the following configuration variables, presented in the
+CONFIGURATION                                  *pckr-configuration*
+`pckr` provides the following configuration variables, presented in the
 structure of the `config` table expected by `startup` or `init`, with their
 default values: >lua
   {
     package_root   = util.join_paths(vim.fn.stdpath('data'), 'site', 'pack'),
-    plugin_package = 'packer', -- The default package for plugins
     max_jobs = nil, -- Limit the number of simultaneous jobs. nil means no limit
     git = {
       cmd                = 'git', -- The base command for git operations
@@ -182,8 +182,8 @@ default values: >lua
       done_sym        = '✓', -- The symbol for a plugin which has completed installation/updating
       removed_sym     = '-', -- The symbol for an unused plugin which was removed
       moved_sym       = '→', -- The symbol for a plugin which was moved (e.g. from opt to start)
-      header_sym      = '━', -- The symbol for the header line in packer's display
-      show_all_info   = true, -- Should packer show all update details automatically?
+      header_sym      = '━', -- The symbol for the header line in pckr's display
+      show_all_info   = true, -- Should pckr show all update details automatically?
       prompt_border   = 'double', -- Border style of prompt popups.
       keybindings = { -- Keybindings for the display window
         quit          = 'q',
@@ -198,9 +198,9 @@ default values: >lua
 
 <
 
-SPECIFYING PLUGINS                             *packer-specifying-plugins*
-`packer` is based around declarative specification of plugins. You can declare
-a plugin using the function |packer.add()|.
+SPECIFYING PLUGINS                             *pckr-specifying-plugins*
+`pckr` is based around declarative specification of plugins. You can declare
+a plugin using the function |pckr.add()|.
 
 `add` takes a list of plugin specifications (strings or tables)
 
@@ -209,24 +209,12 @@ Plugin locations may be specified as:
   2. Full URLs (treated as plugins managed with `git`)
   3. `username/repo` paths (treated as Github `git` plugins)
 
-CONFIGURING PLUGINS                            *packer-plugin-configuration*
-`packer` allows you to configure plugins either before they are loaded (the
-`config_pre` key described in |packer.add()|) or after they are loaded (the
-`config` key described in |packer.add()|).
+CONFIGURING PLUGINS                            *pckr-plugin-configuration*
+`pckr` allows you to configure plugins either before they are loaded (the
+`config_pre` key described in |pckr.add()|) or after they are loaded (the
+`config` key described in |pckr.add()|).
 
-PLUGIN STATUSES                                 *packer-plugin-status*
-You can check whether or not a particular plugin is installed with `packer` as
-well as if that plugin is loaded. To do this you can check for the plugin's
-name in the `packer_plugins` global table. Plugins in this table are saved
-using only the last section of their names e.g. `tpope/vim-fugitive` if
-installed will be under the key `vim-fugitive`.
->lua
-  if packer_plugins["vim-fugitive"] and packer_plugins["vim-fugitive"].loaded then
-  print("Vim fugitive is loaded")
-  -- other custom logic
-  end
-
-POST-UPDATE HOOKS                              *packer-plugin-hooks*
+POST-UPDATE HOOKS                              *pckr-plugin-hooks*
 You may specify operations to be run after successful installs/updates of a
 plugin with the `run` key. This key may either be a Lua function, which will be
 called with the `plugin` table for this plugin (containing the information
@@ -241,7 +229,7 @@ executed.
 2. Otherwise, `run` is treated as a shell command and run in the installation
 directory of the plugin via `$SHELL -c '<run>'`.
 
-DEPENDENCIES                                   *packer-plugin-dependencies*
+DEPENDENCIES                                   *pckr-plugin-dependencies*
 Plugins may specify dependencies via the `requires` key in their specification
 table. This key can be a string or a list (table).
 
@@ -259,29 +247,29 @@ installed.
 Plugins specified in `requires` are removed when no active plugins require
 them.
 
-RESULTS WINDOW KEYBINDINGS                     *packer-results-keybindings*
+RESULTS WINDOW KEYBINDINGS                     *pckr-results-keybindings*
 Once an operation completes, the results are shown in the display window.
-`packer` sets up default keybindings for this window:
+`pckr` sets up default keybindings for this window:
 
 q                    close the display window
 <CR>                 toggle information about a particular plugin
 r                    revert an update
 
 They can be configured by changing the value of `config.display.keybindings`
-(see |packer-configuration|). Setting it to `false` will disable all keybindings.
+(see |pckr-configuration|). Setting it to `false` will disable all keybindings.
 Setting any of its keys to `false` will disable the corresponding keybinding.
 
 ==============================================================================
-API                                            *packer-api*
+API                                            *pckr-api*
 
-setup({config})                                                *packer.setup()*
-    Setup and configure packer.
+setup({config})                                                *pckr.setup()*
+    Setup and configure pckr.
 
     If the user does not call this it will be called internally by
-    |packer.add()|.
+    |pckr.add()|.
 
 
-add({spec})                                                      *packer.add()*
+add({spec})                                                      *pckr.add()*
     `add` allows you to add one or more plugins to the managed set. It can be
     invoked as follows:
     - With a single plugin specification table, e.g. >lua
@@ -289,15 +277,15 @@ add({spec})                                                      *packer.add()*
         'myusername/example',    -- The plugin location string
 
         -- The following keys are all optional
-        branch     = string,                 -- Specifies a git branch to use
-        tag        = string,                 -- Specifies a git tag to use. Supports '*' for "latest tag"
-        commit     = string,                 -- Specifies a git commit to use
-        lock       = boolean,                -- Skip updating this plugin in updates/syncs. Still cleans.
-        run        = string|function|table,  -- Post-update/install hook. See "update/install hooks".
-        requires   = string|string[],        -- Specifies plugin dependencies. See "dependencies".
-        config_pre = string|function,        -- Specifies code to run before this plugin is loaded.
-        config     = string|function,        -- Specifies code to run after this plugin is loaded.
-        cond       = function|function[],    -- Specifies custom loader
+        branch     : string,                 -- Specifies a git branch to use
+        tag        : string,                 -- Specifies a git tag to use. Supports '*' for "latest tag"
+        commit     : string,                 -- Specifies a git commit to use
+        lock       : boolean,                -- Skip updating this plugin in updates/syncs. Still cleans.
+        run        : string|function|table,  -- Post-update/install hook. See "update/install hooks".
+        requires   : string|string[],        -- Specifies plugin dependencies. See "dependencies".
+        config_pre : string|function,        -- Specifies code to run before this plugin is loaded.
+        config     : string|function,        -- Specifies code to run after this plugin is loaded.
+        cond       : function|function[],    -- Specifies custom loader
       }
 <
 

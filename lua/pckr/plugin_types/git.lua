@@ -1,8 +1,8 @@
-local a = require('packer.async')
-local config = require('packer.config')
-local jobs = require('packer.jobs')
-local log = require('packer.log')
-local util = require('packer.util')
+local a = require('pckr.async')
+local config = require('pckr.config')
+local jobs = require('pckr.jobs')
+local log = require('pckr.log')
+local util = require('pckr.util')
 
 local async = a.sync
 

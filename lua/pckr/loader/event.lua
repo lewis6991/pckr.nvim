@@ -5,7 +5,7 @@ return function(events, pattern)
       vim.api.nvim_create_autocmd(events, {
          pattern = pattern,
          once = true,
-         desc = 'packer.nvim lazy load',
+         desc = 'pckr.nvim lazy load',
          callback = function()
             loader()
             -- TODO(lewis6991): should we re-issue the event? (#1163)
