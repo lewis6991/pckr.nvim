@@ -23,6 +23,7 @@ local TITLE = 'pckr.nvim'
 --- @field info string[]? Additional info that can be collapsed
 --- @field expanded boolean Whether info is being displayed
 --- @field mark integer Extmark used track the location of the item in the buffer
+--- @field nameMark integer Extmark used track the location of the item in the buffer
 
 --- @class DisplayCallbacks
 --- @field diff        fun(plugin: Plugin, commit: string, callback: function)
@@ -202,6 +203,8 @@ local function clear_task(self, plugin)
   local item = self.items[plugin]
   api.nvim_buf_del_extmark(self.buf, ns, item.mark)
   item.mark = nil
+  api.nvim_buf_del_extmark(self.buf, ns, item.nameMark)
+  item.nameMark = nil
 end
 
 --- @alias TaskPos 'top' | 'bottom'
@@ -227,7 +230,35 @@ local function update_task_lines(self, plugin, message, pos)
   end
 
   local srow, erow = assert(get_task_region(self, plugin))
-  set_lines(self, srow, erow, message)
+
+  local lines = {}
+  for _, l in ipairs(message) do
+    local line = {}
+    for _, e in ipairs(l) do
+      line[#line+1] = e[1]
+    end
+    lines[#lines+1] = table.concat(line)
+  end
+
+  set_lines(self, srow, erow, lines)
+
+  for i, l in ipairs(message) do
+    local offset = 0
+    for _, e in ipairs(l) do
+      local len = #e[1]
+      local row = srow + i - 1
+      if e[2] then
+        item.nameMark = api.nvim_buf_set_extmark(self.buf, ns, row, offset, {
+          end_row = row,
+          end_col = offset + len,
+          hl_group = e[2],
+          id = item.nameMark
+        })
+      end
+
+      offset = offset + len
+    end
+  end
 
   api.nvim_buf_set_extmark(self.buf, ns, srow, 0, {
     end_row = srow + #message - 1,
@@ -265,10 +296,18 @@ local function render_task(self, plugin, static, top)
     icon = config.display.done_sym
   end
 
-  local lines = { fmt(' %s %s: %s', icon, plugin, item.message) }
+  local lines = { {
+    { string.format(' %s ', icon) },
+    { string.format('%s: ', plugin), 'pckrPackageName' },
+    item.message and {item.message} or nil
+  } }
 
   if item.info and item.expanded then
-    vim.list_extend(lines, pad(item.info))
+    local infot = {}
+    for _, l in ipairs(pad(item.info)) do
+      infot[#infot+1] = { { l } }
+    end
+    vim.list_extend(lines, infot)
   end
 
   local pos --- @type TaskPos?
@@ -666,7 +705,7 @@ local function do_syntax_cmds(working_sym, done_sym, error_sym)
     [[syn match pckrPackageNotLoaded /(not loaded)$/]],
     [[syn match pckrString /\v(''|""|(['"]).{-}[^\\]\2)/]],
     [[syn match pckrBool /\<\(false\|true\)\>/]],
-    [[syn match pckrPackageName /^\ • \zs[^ ]*/]],
+    -- [[syn match pckrPackageName /^\ • \zs[^ ]*/]],
   } do
     vim.cmd(c)
   end
