@@ -645,9 +645,8 @@ end
 ---@param done_sym string
 ---@param error_sym string
 ---@return string[]
-local function make_filetype_cmds(working_sym, done_sym, error_sym)
-  return {
-    'setlocal nolist nowrap nospell nonumber norelativenumber nofoldenable signcolumn=no',
+local function do_syntax_cmds(working_sym, done_sym, error_sym)
+  for _, c in ipairs {
     'syntax clear',
     'syn match pckrWorking /^ ' .. working_sym .. '/',
     'syn match pckrSuccess /^ ' .. done_sym .. '/',
@@ -668,23 +667,16 @@ local function make_filetype_cmds(working_sym, done_sym, error_sym)
     [[syn match pckrString /\v(''|""|(['"]).{-}[^\\]\2)/]],
     [[syn match pckrBool /\<\(false\|true\)\>/]],
     [[syn match pckrPackageName /^\ • \zs[^ ]*/]],
-    'hi def link pckrWorking        SpecialKey',
-    'hi def link pckrSuccess        Question',
-    'hi def link pckrFail           ErrorMsg',
-    'hi def link pckrHash           Identifier',
-    'hi def link pckrRelDate        Comment',
-    'hi def link pckrProgress       Boolean',
-    'hi def link pckrOutput         Type',
-  }
+  } do
+    vim.cmd(c)
+  end
 end
 
 local function set_config_keymaps()
   local dcfg = config.display
-  if dcfg.keybindings then
-    for name, lhs in pairs(dcfg.keybindings) do
-      if keymaps[name] then
-        keymaps[name].lhs = lhs
-      end
+  for name, lhs in pairs(dcfg.keybindings or {}) do
+    if keymaps[name] then
+      keymaps[name].lhs = lhs
     end
   end
 end
@@ -702,7 +694,8 @@ end
 
 --- Initialize options, settings, and keymaps for display windows
 --- @param bufnr integer
-local function setup_display_buf(bufnr)
+--- @param winid integer
+local function setup_display(bufnr, winid)
   vim.bo[bufnr].filetype = 'pckr'
   api.nvim_buf_set_name(bufnr, '[pckr]')
   set_config_keymaps()
@@ -723,26 +716,41 @@ local function setup_display_buf(bufnr)
     end
   end
 
-  local ft_cmds = make_filetype_cmds(
-    config.display.working_sym,
-    config.display.done_sym,
-    config.display.error_sym)
-
-
-  for _, c in ipairs(ft_cmds) do
-    vim.cmd(c)
+  local function set_winlocal_option(option, value)
+    api.nvim_set_option_value(option, value, { win = winid, scope = 'local' })
   end
 
+  set_winlocal_option('list', false)
+  set_winlocal_option('wrap', false)
+  set_winlocal_option('spell', false)
+  set_winlocal_option('number', false)
+  set_winlocal_option('relativenumber', false)
+  set_winlocal_option('foldenable', false)
+  set_winlocal_option('signcolumn', 'no')
+
+  do_syntax_cmds(
+    config.display.working_sym,
+    config.display.done_sym,
+    config.display.error_sym
+  )
+
   for _, c in ipairs({
-    { 'pckrStatus', 'Type' },
-    { 'pckrStatusCommit', 'Constant' },
-    { 'pckrStatusSuccess', 'Constant' },
-    { 'pckrStatusFail', 'ErrorMsg' },
-    { 'pckrPackageName', 'Title' },
+    { 'pckrBool'            , 'Boolean' },
+    { 'pckrBreakingChange'  , 'WarningMsg' },
+    { 'pckrFail'            , 'ErrorMsg' },
+    { 'pckrHash'            , 'Identifier' },
+    { 'pckrOutput'          , 'Type' },
+    { 'pckrPackageName'     , 'Title' },
     { 'pckrPackageNotLoaded', 'Comment' },
-    { 'pckrString', 'String' },
-    { 'pckrBool', 'Boolean' },
-    { 'pckrBreakingChange', 'WarningMsg' },
+    { 'pckrProgress'        , 'Boolean' },
+    { 'pckrRelDate'         , 'Comment' },
+    { 'pckrStatus'          , 'Type' },
+    { 'pckrStatusCommit'    , 'Constant' },
+    { 'pckrStatusFail'      , 'ErrorMsg' },
+    { 'pckrStatusSuccess'   , 'Constant' },
+    { 'pckrString'          , 'String' },
+    { 'pckrSuccess'         , 'Question' },
+    { 'pckrWorking'         , 'SpecialKey' },
   }) do
     api.nvim_set_hl(0, c[1], { link = c[2], default = true })
   end
@@ -764,7 +772,7 @@ function M.open(cbs)
 
   if not (display.win and api.nvim_win_is_valid(display.win)) then
     display.buf, display.win = open_win()
-    setup_display_buf(display.buf)
+    setup_display(display.buf, display.win)
   end
 
   display.callbacks = cbs
