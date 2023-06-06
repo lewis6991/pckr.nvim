@@ -7,6 +7,7 @@ local util = require('pckr.util')
 local async = a.sync
 
 local fmt = string.format
+local uv = vim.loop
 
 --- @class PluginHandler
 local M = {}
@@ -291,22 +292,18 @@ local function resolve_tag(plugin)
 end
 
 --- @param plugin Plugin
---- @param disp? Display
+--- @param update_task fun(msg: string, info?: string[])
 --- @return boolean, string[]
-local function checkout(plugin, disp)
-  local function update_disp(msg, info)
-    if disp then
-      disp:task_update(plugin.name, msg, info)
-    end
-  end
+local function checkout(plugin, update_task)
+  update_task = update_task or function() end
 
-  update_disp('fetching reference...')
+  update_task('fetching reference...')
 
   local tag = plugin.tag
 
   -- Resolve tag
   if tag and has_wildcard(tag) then
-    update_disp(fmt('getting tag for wildcard %s...', tag))
+    update_task(fmt('getting tag for wildcard %s...', tag))
     local tagerr
     tag, tagerr = resolve_tag(plugin)
     if not tag then
@@ -333,12 +330,12 @@ local function checkout(plugin, disp)
 
   assert(target, 'Could not determine target for ' .. plugin.install_path)
 
-  update_disp('checking out...')
+  update_task('checking out...')
   local cmd = vim.list_extend({'checkout', '--progress', target}, checkout_args)
   return git_run(cmd, {
       cwd = plugin.install_path,
       on_stderr = function(chunk)
-        update_disp('checking out... ', process_progress(chunk))
+        update_task('checking out... ', process_progress(chunk))
       end,
     })
 end
@@ -363,12 +360,12 @@ local function mark_breaking_changes(plugin, disp)
   return ok, out
 end
 
-local function clone(plugin, disp, timeout)
-  local function task_update(info)
-    disp:task_update(plugin.name, 'cloning...', info)
-  end
-
-  task_update()
+--- @async
+--- @param plugin Plugin
+--- @param update_task fun(info?: string[])
+--- @param timeout integer
+local function clone(plugin, update_task, timeout)
+  update_task('cloning...')
 
   local clone_cmd = {
     'clone',
@@ -388,21 +385,50 @@ local function clone(plugin, disp, timeout)
   return git_run(clone_cmd, {
     timeout = timeout,
     on_stderr = function(chunk)
-      task_update(process_progress(chunk))
+      update_task('cloning...', process_progress(chunk))
     end,
   })
 end
 
+--- If `path` is a link, remove it if the destination does not exist.
+--- @async
+--- @param path string
+local function sanitize_path(path)
+  assert(path)
+  local lerr, stat = a.wrap(uv.fs_lstat, 2)(path)
+  if lerr or stat.type ~= 'link' then
+    -- path doesn't exist or isn't a link
+    return
+  end
+
+  -- path is a link; check destination exists, otherwise delete
+  local err = a.wrap(uv.fs_realpath, 2)(path)
+  if not err then
+    -- exists
+    return
+  end
+
+  -- dead link; remove
+  a.wrap(uv.fs_unlink, 2)(path)
+end
+
+--- @async
 --- @param plugin Plugin
 --- @param disp Display
 --- @return boolean?, string[]
 local function install(plugin, disp)
-  local ok, out = clone(plugin, disp, config.git.clone_timeout)
+  local function update_task(msg, info)
+    disp:task_update(plugin.name, msg, info)
+  end
+
+  sanitize_path(plugin.install_path)
+
+  local ok, out = clone(plugin, update_task, config.git.clone_timeout)
   if not ok then
     return nil, out
   end
 
-  ok, out = checkout(plugin, disp)
+  ok, out = checkout(plugin, update_task)
   if not ok then
     return nil, out
   end
@@ -442,11 +468,11 @@ local function update(plugin, disp)
 
   plugin.revs[1] = get_head(plugin.install_path)
 
-  local function fetch_update(info)
-    disp:task_update(plugin.name, 'fetching updates...', info)
+  local function update_task(msg, info)
+    disp:task_update(plugin.name, msg, info)
   end
 
-  fetch_update()
+  update_task('fetching updates...')
   local ok, out = git_run({
     'fetch',
     '--tags',
@@ -456,15 +482,16 @@ local function update(plugin, disp)
   }, {
       cwd = plugin.install_path,
       on_stderr = function(chunk)
-        fetch_update(process_progress(chunk))
+        update_task('fetching updates...', process_progress(chunk))
       end,
     })
   if not ok then
     return false, out
   end
 
-  disp:task_update(plugin.name, 'pulling updates...')
-  ok, out = checkout(plugin, disp)
+  update_task('pulling updates...')
+
+  ok, out = checkout(plugin, update_task)
 
   if not ok then
     log_err(plugin, 'failed checkout', out)
@@ -474,7 +501,7 @@ local function update(plugin, disp)
   plugin.revs[2] = get_head(plugin.install_path)
 
   if plugin.revs[1] ~= plugin.revs[2] then
-    disp:task_update(plugin.name, 'getting commit messages...')
+    update_task('getting commit messages...')
     ok, out = git_run({
       'log',
       '--color=never',
