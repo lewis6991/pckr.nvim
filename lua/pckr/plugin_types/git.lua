@@ -291,6 +291,14 @@ local function resolve_tag(plugin)
   return nil, out
 end
 
+--- @param path string
+--- @param branch string
+--- @return string?
+local function resolve_branch(path, branch)
+  local remote_target = ref(path, 'remotes', 'origin', branch)
+  return remote_target or ref(path, 'heads', branch)
+end
+
 --- @param plugin Plugin
 --- @param update_task fun(msg: string, info?: string[])
 --- @return boolean, string[]
@@ -299,33 +307,32 @@ local function checkout(plugin, update_task)
 
   update_task('fetching reference...')
 
-  local tag = plugin.tag
+  local commit, tag = plugin.commit, plugin.tag
 
-  -- Resolve tag
-  if tag and has_wildcard(tag) then
-    update_task(fmt('getting tag for wildcard %s...', tag))
-    local tagerr
-    tag, tagerr = resolve_tag(plugin)
-    if not tag then
-      return false, assert(tagerr)
-    end
-  end
-
-  local target --- @type string
-  local branch --- @type string?
+  local target --- @type string?
   local checkout_args = {} --- @type string[]
-
-  local commit = plugin.commit
 
   if commit then
     target = commit
   elseif tag then
+    -- Resolve tag
+    if has_wildcard(tag) then
+      update_task(fmt('getting tag for wildcard %s...', tag))
+      local tagerr
+      tag, tagerr = resolve_tag(plugin)
+      if not tag then
+        return false, assert(tagerr)
+      end
+    end
+
     target = 'tags/' .. tag
   else
-    branch = plugin.branch or get_current_branch(plugin)
+    local branch = plugin.branch or get_current_branch(plugin)
     vim.list_extend(checkout_args, { '-B', branch })
-    local remote_target = ref(plugin.install_path, 'remotes', 'origin', branch)
-    target = remote_target or ref(plugin.install_path, 'heads', branch)
+    target = resolve_branch(plugin.install_path, branch)
+    if not target then
+      return false, { 'Could not find commit for branch ' .. branch }
+    end
   end
 
   assert(target, 'Could not determine target for ' .. plugin.install_path)
