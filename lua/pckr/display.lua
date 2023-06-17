@@ -95,6 +95,11 @@ local function open_win(inner)
   vim.bo[buf].swapfile = false
   vim.bo[buf].bufhidden = 'wipe'
 
+  if not vim.g.colors_name then
+    -- default colorscheme; make NormalFloat palatable
+    vim.wo[win].winhighlight = 'NormalFloat:Normal'
+  end
+
   return buf, win
 end
 
