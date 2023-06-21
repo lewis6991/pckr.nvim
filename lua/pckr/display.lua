@@ -310,7 +310,7 @@ local function render_task(self, plugin, static, top)
 
   if item.info and item.expanded then
     for _, l in ipairs(pad(item.info)) do
-      lines[#lines + 1]({ { l } })
+      lines[#lines + 1] = { { l } }
     end
   end
 

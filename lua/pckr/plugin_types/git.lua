@@ -76,18 +76,24 @@ local function get_breaking_commits(commit_bodies)
   return ret
 end
 
+--- @param x string
+--- @return string[]
+local function split(x)
+  return vim.split(x, '\n', {plain=true})
+end
+
 --- @param args string[]
---- @param opts? JobOpts
+--- @param opts? SystemOpts
 --- @return boolean, string[]
 local function git_run(args, opts)
   opts = opts or {}
   opts.env = opts.env or job_env
-  local jr = jobs.run({ config.git.cmd, unpack(args) }, opts)
-  local ok = jr.exit_code == 0
+  local obj = jobs.run({ config.git.cmd, unpack(args) }, opts)
+  local ok = obj.code == 0
   if ok then
-    return true, jr.stdout
+    return true, split(obj.stdout)
   end
-  return false, jr.stderr
+  return false, split(obj.stderr)
 end
 
 --- @type {[1]: integer, [2]: integer, [3]: integer}
