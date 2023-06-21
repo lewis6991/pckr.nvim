@@ -11,16 +11,16 @@ local start_time = vim.loop.hrtime()
 -- under the terms of the MIT license. See LICENSE for details.
 -- User configuration section
 
---- @alias LogLevel 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
+--- @alias Pckr.LogLevel 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal'
 
---- @class LogConfig
+--- @class Pckr.LogConfig
 --- @field active_levels_console table<integer,boolean>
 --- @field active_levels_file    table<integer,boolean>
 --- @field use_file              boolean
---- @field level                 LogLevel
---- @field level_file            LogLevel
+--- @field level                 Pckr.LogLevel
+--- @field level_file            Pckr.LogLevel
 
---- @type LogConfig
+--- @type Pckr.LogConfig
 local default_config = {
   -- Should write to a file
   use_file = true,
@@ -52,7 +52,7 @@ local default_config = {
 }
 
 --- @class LevelConfig
---- @field name LogLevel
+--- @field name Pckr.LogLevel
 --- @field hl string
 
 --- @type LevelConfig[]
@@ -112,7 +112,7 @@ local cache_dir = vim.fn.stdpath('cache')
 local outfile = string.format('%s/pckr.nvim.log', cache_dir)
 vim.fn.mkdir(cache_dir, 'p')
 
---- @type table<LogLevel,integer>
+--- @type table<Pckr.LogLevel,integer>
 local levels = {}
 
 for i, v in ipairs(MODES) do

@@ -307,7 +307,7 @@ local function resolve_branch(path, branch)
 end
 
 --- @param plugin Pckr.Plugin
---- @param update_task fun(msg: string, info?: string[])
+--- @param update_task? fun(msg: string, info?: string[])
 --- @return boolean, string[]
 local function checkout(plugin, update_task)
   update_task = update_task or function() end
@@ -374,10 +374,10 @@ local function mark_breaking_changes(plugin, disp)
   return ok, out
 end
 
---- @async
 --- @param plugin Pckr.Plugin
---- @param update_task fun(info?: string[])
+--- @param update_task fun(msg: string, info?: string[])
 --- @param timeout integer
+--- @return boolean, string[]
 local function clone(plugin, update_task, timeout)
   update_task('cloning...')
 
@@ -405,7 +405,6 @@ local function clone(plugin, update_task, timeout)
 end
 
 --- If `path` is a link, remove it if the destination does not exist.
---- @async
 --- @param path string
 local function sanitize_path(path)
   assert(path)
@@ -426,11 +425,12 @@ local function sanitize_path(path)
   a.wrap(uv.fs_unlink, 2)(path)
 end
 
---- @async
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
 --- @return boolean?, string[]
 local function install(plugin, disp)
+  --- @param msg string
+  --- @param info? string[]
   local function update_task(msg, info)
     disp:task_update(plugin.name, msg, info)
   end

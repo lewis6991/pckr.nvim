@@ -33,14 +33,14 @@ end
 --- vim.loop.spawn, but ensures that all output from the command has been
 --- flushed before calling the callback.
 --- @param cmd string
---- @param options uv.spawn.options
+--- @param options uv.aliases.spawn_options
 --- @param callback fun(exit_code: integer, signal: integer)
 local function spawn(cmd, options, callback)
   local handle --- @type uv_process_t?
   local timer --- @type uv_timer_t
   trace(cmd, options)
   handle = uv.spawn(cmd, options, function(exit_code, signal)
-    handle:close()
+    assert(handle):close()
     if timer then
       timer:stop()
       timer:close()

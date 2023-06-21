@@ -11,6 +11,7 @@ end
 -- Completion user plugins
 -- Intended to provide completion for PckrUpdate/Sync/Install command
 --- @param lead string
+--- @param _? string
 --- @return string[]
 local function plugin_complete(lead, _)
   local plugins = require('pckr.plugin').plugins

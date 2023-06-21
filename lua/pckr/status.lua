@@ -129,10 +129,6 @@ local function load_state(plugin)
     return ' (not loaded)'
   end
 
-  if plugin.lazy then
-    return ' (manually loaded)'
-  end
-
   return ''
 end
 

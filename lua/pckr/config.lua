@@ -2,7 +2,7 @@ local util = require('pckr.util')
 
 local join_paths = util.join_paths
 
---- @class Pckr.Display
+--- @class Pckr.Config.Display
 --- @field non_interactive boolean
 --- @field prompt_border   string
 --- @field working_sym     string
@@ -14,24 +14,16 @@ local join_paths = util.join_paths
 --- @field header_sym      string
 --- @field keybindings     table<string,(string|string[])>
 
---- @class Git
+--- @class Pckr.Config.Git
 --- @field cmd                string
 --- @field depth              integer
 --- @field clone_timeout      integer
 --- @field default_url_format string
 
---- @alias LogLevel
---- | 'trace'
---- | 'debug'
---- | 'info'
---- | 'warn'
---- | 'error'
---- | 'fatal'
+--- @class Pckr.Config.Log
+--- @field level Pckr.LogLevel
 
---- @class Log
---- @field level LogLevel
-
---- @class Lockfile
+--- @class Pckr.Config.Lockfile
 --- @field path string
 
 --- @class Pckr.Config
@@ -42,10 +34,10 @@ local join_paths = util.join_paths
 --- @field opt_dir      string
 --- @field autoremove   boolean
 --- @field autoinstall  boolean
---- @field display      Pckr.Display
---- @field git          Git
---- @field log          Log
---- @field lockfile     Lockfile
+--- @field display      Pckr.Config.Display
+--- @field git          Pckr.Config.Git
+--- @field log          Pckr.Config.Log
+--- @field lockfile     Pckr.Config.Lockfile
 
 --- @type Pckr.Config
 local default_config = {
@@ -84,6 +76,7 @@ local default_config = {
 
 local config = vim.deepcopy(default_config)
 
+--- @param _ table
 --- @param user_config Pckr.Config
 --- @return Pckr.Config
 local function set(_, user_config)
