@@ -7,7 +7,7 @@ local loader = require('pckr.loader')
 
 local did_setup = false
 
---- @param user_config? Config
+--- @param user_config? Pckr.Config
 local function setup(user_config)
   log.debug('setup')
 
@@ -29,6 +29,7 @@ local function load_plugins()
   loader.setup(plugin.plugins)
 end
 
+--- @param spec Pckr.UserSpec
 function M.add(spec)
   if not did_setup then
     setup()
@@ -37,12 +38,12 @@ function M.add(spec)
   log.debug('PROCESSING PLUGIN SPEC')
   plugin.process_spec(spec)
 
-  local to_install = {}  --- @type string[]
+  local to_install = {} --- @type string[]
 
   if config.autoinstall then
     for name, p in pairs(plugin.plugins) do
       if not p.installed then
-        to_install[#to_install+1] = name
+        to_install[#to_install + 1] = name
       end
     end
   end
@@ -59,8 +60,8 @@ function M.add(spec)
 end
 
 -- This should be safe to call multiple times.
---- @param user_config Config
---- @param user_spec? UserSpec
+--- @param user_config Pckr.Config
+--- @param user_spec? Pckr.UserSpec
 function M.setup(user_config, user_spec)
   setup(user_config)
 

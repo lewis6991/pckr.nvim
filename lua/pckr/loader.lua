@@ -13,7 +13,7 @@ local function config_error_handler(name)
   end
 end
 
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @param field 'config' | 'config_pre'
 local function apply_config(plugin, field)
   local c = plugin[field] ---@type fun()?
@@ -49,7 +49,7 @@ end
 --- @param fn fun(_: string, _: string, _: string): boolean?
 local function walk(path, fn)
   ls(path, function(child, name, ftype)
-    if ftype == "directory" then
+    if ftype == 'directory' then
       walk(child, fn)
     end
     fn(child, name, ftype)
@@ -59,7 +59,7 @@ end
 local function source_after(install_path)
   walk(util.join_paths(install_path, 'after', 'plugin'), function(path, _, t)
     local ext = path:sub(-4)
-    if t == "file" and (ext == ".lua" or ext == ".vim") then
+    if t == 'file' and (ext == '.lua' or ext == '.vim') then
       log.fmt_debug('sourcing %s', path)
       vim.cmd.source({ path, mods = { silent = true } })
     end
@@ -92,7 +92,7 @@ _G.loadfile = function(path)
   end
 end
 
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 function M.load_plugin(plugin)
   if plugin.loaded then
     log.fmt_debug('Already loaded %s', plugin.name)
@@ -144,10 +144,10 @@ end
 --- @param x T|T[]
 --- @return T[]
 local function ensurelist(x)
-   return type(x) == "table" and x or { x }
+  return type(x) == 'table' and x or { x }
 end
 
---- @param plugins table<string,Plugin>
+--- @param plugins table<string,Pckr.Plugin>
 function M.setup(plugins)
   for _, plugin in pairs(plugins) do
     if not plugin.cond then

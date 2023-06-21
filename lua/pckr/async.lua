@@ -9,8 +9,13 @@ local function execute(func, callback, ...)
     local stat, nargs, fn_or_ret = unpack(ret)
 
     if not stat then
-      error(string.format("The coroutine failed with this message: %s\n%s",
-        nargs, debug.traceback(thread)))
+      error(
+        string.format(
+          'The coroutine failed with this message: %s\n%s',
+          nargs,
+          debug.traceback(thread)
+        )
+      )
     end
 
     if co.status(thread) == 'dead' then

@@ -9,7 +9,7 @@ local async = a.sync
 local fmt = string.format
 local uv = vim.loop
 
---- @class PluginHandler
+--- @class Pckr.PluginHandler
 local M = {}
 
 --- @type string[]
@@ -48,19 +48,22 @@ local TYPE_SCOPE_EXPLAIN_PAT = '[[a-zA-Z]+%([^)]+%)!:]'
 ---@param x string
 ---@return boolean
 local function is_breaking(x)
-  return x and (
-    x:match(BREAKING_CHANGE_PAT) or
-    x:match(BREAK_TAG_PAT) or
-    x:match(TYPE_EXCLAIM_PAT) or
-    x:match(TYPE_SCOPE_EXPLAIN_PAT)) ~=
-    nil
+  return x
+    and (
+        x:match(BREAKING_CHANGE_PAT)
+        or x:match(BREAK_TAG_PAT)
+        or x:match(TYPE_EXCLAIM_PAT)
+        or x:match(TYPE_SCOPE_EXPLAIN_PAT)
+      )
+      ~= nil
 end
 
 ---@param commit_bodies string[]
 ---@return string[]
 local function get_breaking_commits(commit_bodies)
   local ret = {} --- @type string[]
-  local commits = vim.gsplit(table.concat(commit_bodies, '\n'), '===COMMIT_START===', { plain = true })
+  local commits =
+    vim.gsplit(table.concat(commit_bodies, '\n'), '===COMMIT_START===', { plain = true })
 
   for commit in commits do
     local commit_parts = vim.split(commit, '===BODY_START===')
@@ -189,7 +192,7 @@ local function packed_refs(dir)
   local lines = util.file_lines(refs)
   local ret = {} --- @type table<string,string>
   for _, line in ipairs(lines or {}) do
-    local ref, name = line:match("^(.*) refs/(.*)$")
+    local ref, name = line:match('^(.*) refs/(.*)$')
     if ref then
       ret[name] = ref
     end
@@ -205,11 +208,11 @@ local function ref(dir, ...)
   if x then
     return x
   end
-  local r = table.concat({ ... }, "/")
+  local r = table.concat({ ... }, '/')
   return packed_refs(dir)[r]
 end
 
----@param plugin Plugin
+---@param plugin Pckr.Plugin
 ---@return string
 local function get_current_branch(plugin)
   -- first try local HEAD
@@ -237,7 +240,7 @@ end
 ---@param messages string|string[]
 ---@return string[]
 local function split_messages(messages)
-  if type(messages) == "string" then
+  if type(messages) == 'string' then
     messages = { messages }
   end
   local lines = {}
@@ -267,16 +270,19 @@ local function process_progress(x)
   return lines
 end
 
----@param plugin Plugin
+---@param plugin Pckr.Plugin
 ---@return string?, string[]?
 local function resolve_tag(plugin)
   local tag = plugin.tag
   local ok, out = git_run({
-    'tag', '-l', tag,
-    '--sort', '-version:refname',
+    'tag',
+    '-l',
+    tag,
+    '--sort',
+    '-version:refname',
   }, {
-      cwd = plugin.install_path,
-    })
+    cwd = plugin.install_path,
+  })
 
   if ok then
     tag = vim.split(out[#out], '\n')[1]
@@ -285,7 +291,8 @@ local function resolve_tag(plugin)
 
   log.fmt_warn(
     'Wildcard expansion did not find any tag for plugin %s: defaulting to latest commit...',
-    plugin.name)
+    plugin.name
+  )
 
   -- Wildcard is not found, then we bypass the tag
   return nil, out
@@ -299,7 +306,7 @@ local function resolve_branch(path, branch)
   return remote_target or ref(path, 'heads', branch)
 end
 
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @param update_task fun(msg: string, info?: string[])
 --- @return boolean, string[]
 local function checkout(plugin, update_task)
@@ -338,17 +345,17 @@ local function checkout(plugin, update_task)
   assert(target, 'Could not determine target for ' .. plugin.install_path)
 
   update_task('checking out...')
-  local cmd = vim.list_extend({'checkout', '--progress', target}, checkout_args)
+  local cmd = vim.list_extend({ 'checkout', '--progress', target }, checkout_args)
   return git_run(cmd, {
-      cwd = plugin.install_path,
-      on_stderr = function(chunk)
-        update_task('checking out... ', process_progress(chunk))
-      end,
-    })
+    cwd = plugin.install_path,
+    on_stderr = function(chunk)
+      update_task('checking out... ', process_progress(chunk))
+    end,
+  })
 end
 
---- @param plugin Plugin
---- @param disp Display
+--- @param plugin Pckr.Plugin
+--- @param disp Pckr.Display
 --- @return boolean, string[]
 local function mark_breaking_changes(plugin, disp)
   disp:task_update(plugin.name, 'checking for breaking changes...')
@@ -359,8 +366,8 @@ local function mark_breaking_changes(plugin, disp)
     '--pretty=format:===COMMIT_START===%h%n%s===BODY_START===%b',
     'HEAD@{1}...HEAD',
   }, {
-      cwd = plugin.install_path,
-    })
+    cwd = plugin.install_path,
+  })
   if ok then
     plugin.breaking_commits = get_breaking_commits(out)
   end
@@ -368,7 +375,7 @@ local function mark_breaking_changes(plugin, disp)
 end
 
 --- @async
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @param update_task fun(info?: string[])
 --- @param timeout integer
 local function clone(plugin, update_task, timeout)
@@ -383,7 +390,7 @@ local function clone(plugin, update_task, timeout)
   -- partial clone support
   if check_version({ 2, 19, 0 }) then
     vim.list_extend(clone_cmd, {
-      "--filter=blob:none",
+      '--filter=blob:none',
     })
   end
 
@@ -420,8 +427,8 @@ local function sanitize_path(path)
 end
 
 --- @async
---- @param plugin Plugin
---- @param disp Display
+--- @param plugin Pckr.Plugin
+--- @param disp Pckr.Display
 --- @return boolean?, string[]
 local function install(plugin, disp)
   local function update_task(msg, info)
@@ -443,8 +450,8 @@ local function install(plugin, disp)
   return true, out
 end
 
---- @param plugin Plugin
---- @param disp Display
+--- @param plugin Pckr.Plugin
+--- @param disp Pckr.Display
 --- @return string[]?
 M.installer = async(function(plugin, disp)
   local ok, out = install(plugin, disp)
@@ -459,16 +466,16 @@ M.installer = async(function(plugin, disp)
   return out
 end, 2)
 
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @param msg string
 --- @param x any
 local function log_err(plugin, msg, x)
-  local x1 = type(x) == "string" and x or table.concat(x, '\n')
+  local x1 = type(x) == 'string' and x or table.concat(x, '\n')
   log.fmt_debug('%s: $s: %s', plugin.name, msg, x1)
 end
 
---- @param plugin Plugin
---- @param disp Display
+--- @param plugin Pckr.Plugin
+--- @param disp Pckr.Display
 --- @return boolean, string[]?
 local function update(plugin, disp)
   disp:task_update(plugin.name, 'checking current commit...')
@@ -487,11 +494,11 @@ local function update(plugin, disp)
     '--update-shallow',
     '--progress',
   }, {
-      cwd = plugin.install_path,
-      on_stderr = function(chunk)
-        update_task('fetching updates...', process_progress(chunk))
-      end,
-    })
+    cwd = plugin.install_path,
+    on_stderr = function(chunk)
+      update_task('fetching updates...', process_progress(chunk))
+    end,
+  })
   if not ok then
     return false, out
   end
@@ -516,8 +523,8 @@ local function update(plugin, disp)
       '--no-show-signature',
       fmt('%s...%s', plugin.revs[1], plugin.revs[2]),
     }, {
-        cwd = plugin.install_path,
-      })
+      cwd = plugin.install_path,
+    })
 
     if not ok then
       log_err(plugin, 'failed getting commit messages', out)
@@ -536,8 +543,8 @@ local function update(plugin, disp)
   return true
 end
 
---- @param plugin Plugin
---- @param disp Display
+--- @param plugin Pckr.Plugin
+--- @param disp Pckr.Display
 --- @return string[]?
 M.updater = async(function(plugin, disp)
   local ok, out = update(plugin, disp)
@@ -547,7 +554,7 @@ M.updater = async(function(plugin, disp)
   end
 end, 2)
 
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @return string?
 M.remote_url = async(function(plugin)
   local ok, out = git_run({ 'remote', 'get-url', 'origin' }, {
@@ -559,17 +566,18 @@ M.remote_url = async(function(plugin)
   end
 end, 1)
 
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @param commit string
 --- @param callback fun(_: string[]?, _: string[]?)
 M.diff = async(function(plugin, commit, callback)
   local ok, out = git_run({
-    'show', '--no-color',
+    'show',
+    '--no-color',
     '--pretty=medium',
     commit,
   }, {
-      cwd = plugin.install_path,
-    })
+    cwd = plugin.install_path,
+  })
 
   if ok then
     callback(split_messages(out))
@@ -578,7 +586,7 @@ M.diff = async(function(plugin, commit, callback)
   end
 end, 3)
 
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @return string[]?
 M.revert_last = async(function(plugin)
   local ok, out = git_run({ 'reset', '--hard', 'HEAD@{1}' }, {
@@ -600,7 +608,7 @@ M.revert_last = async(function(plugin)
 end, 1)
 
 --- Reset the plugin to `commit`
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @param commit string
 --- @return string[]?
 M.revert_to = async(function(plugin, commit)
@@ -616,7 +624,7 @@ M.revert_to = async(function(plugin, commit)
 end, 2)
 
 --- Returns HEAD's short hash
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @return string?
 M.get_rev = async(function(plugin)
   return get_head(plugin.install_path)

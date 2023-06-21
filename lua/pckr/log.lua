@@ -39,7 +39,8 @@ local default_config = {
     [6] = true,
   },
 
-  active_levels_file = { [1] = true,
+  active_levels_file = {
+    [1] = true,
     [2] = true,
     [3] = true,
     [4] = true,
@@ -84,7 +85,7 @@ local function stringify(...)
   for i = 1, select('#', ...) do
     local x = select(i, ...)
 
-    if type(x) == "number" then
+    if type(x) == 'number' then
       x = tostring(round(x, FLOAT_PRECISION))
     elseif type(x) ~= 'string' then
       x = vim.inspect(x)
@@ -132,14 +133,16 @@ local function log_at_level_console(level_config, message_maker, ...)
       level_config.name:upper(),
       os.date('%H:%M:%S'),
       console_lineinfo,
-      msg)
+      msg
+    )
 
     -- Heuristic to check for nvim-notify
     local is_fancy_notify = type(vim.notify) == 'table'
     vim.notify(
-      string.format([[%s%s]], is_fancy_notify and '' or ('[pckr.nvim'), console_string),
+      string.format([[%s%s]], is_fancy_notify and '' or '[pckr.nvim', console_string),
       vim.log.levels[level_config.name:upper()],
-      { title = 'pckr.nvim' })
+      { title = 'pckr.nvim' }
+    )
   end)
 end
 
@@ -161,13 +164,16 @@ local function log_at_level_file(level_config, message_maker, ...)
   --- @type string
   local lineinfo = src .. ':' .. info.currentline
 
-  fp:write(string.format(
-    '[%-6s%s %s] %s: %s\n',
-    level_config.name:upper(),
-    os.date('%H:%M:%S'),
-    vim.loop.hrtime() - start_time,
-    lineinfo,
-    message_maker(...)))
+  fp:write(
+    string.format(
+      '[%-6s%s %s] %s: %s\n',
+      level_config.name:upper(),
+      os.date('%H:%M:%S'),
+      vim.loop.hrtime() - start_time,
+      lineinfo,
+      message_maker(...)
+    )
+  )
 
   fp:close()
 end
@@ -178,7 +184,11 @@ end
 ---@param message_maker fun(...): string
 ---@param ... any
 local function log_at_level(level, level_config, message_maker, ...)
-  if level >= levels[config.level_file] and config.use_file and config.active_levels_file[level] then
+  if
+    level >= levels[config.level_file]
+    and config.use_file
+    and config.active_levels_file[level]
+  then
     log_at_level_file(level_config, message_maker, ...)
   end
   if level >= levels[config.level] and config.active_levels_console[level] then

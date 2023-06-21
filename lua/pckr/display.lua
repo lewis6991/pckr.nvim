@@ -3,7 +3,6 @@ local log = require('pckr.log')
 local config = require('pckr.config')
 local awrap = require('pckr.async').wrap
 local pckr_plugins = require('pckr.plugin').plugins
-local fmt = string.format
 
 local ns = api.nvim_create_namespace('pckr_display')
 
@@ -11,41 +10,34 @@ local HEADER_LINES = 2
 
 local TITLE = 'pckr.nvim'
 
---- @alias Status
+--- @alias Pckr.Display.Status
 --- | 'running'
 --- | 'failed'
 --- | 'success'
 --- | 'done'
 
---- @class Item
---- @field status Status
+--- @class Pckr.Display.Item
+--- @field status Pckr.Display.Status
 --- @field message string
 --- @field info string[]? Additional info that can be collapsed
 --- @field expanded boolean Whether info is being displayed
 --- @field mark integer Extmark used track the location of the item in the buffer
 --- @field nameMark integer Extmark used track the location of the item in the buffer
 
---- @class DisplayCallbacks
---- @field diff        fun(plugin: Plugin, commit: string, callback: function)
---- @field revert_last fun(plugin: Plugin)
+--- @class Pckr.Display.Callbacks
+--- @field diff        fun(plugin: Pckr.Plugin, commit: string, callback: function)
+--- @field revert_last fun(plugin: Pckr.Plugin)
 
---- @class Display
+--- @class Pckr.Display
 --- @field interactive boolean
---- @field buf         integer
---- @field win         integer
---- @field items       table<string,Item>
+--- @field buf?        integer
+--- @field win?        integer
+--- @field items       table<string,Pckr.Display.Item>
 --- @field running     boolean
---- @field callbacks?  DisplayCallbacks
+--- @field callbacks?  Pckr.Display.Callbacks
 local Display = {}
 
---- Check if we have a valid display window
---- @param disp Display
---- @return boolean
-local function valid_display(disp)
-  return disp and disp.interactive and api.nvim_buf_is_valid(disp.buf) and api.nvim_win_is_valid(disp.win)
-end
-
---- @param disp Display
+--- @param disp Pckr.Display
 --- @return string?, {[1]:integer, [2]:integer}?
 local function get_plugin(disp)
   local row = unpack(api.nvim_win_get_cursor(0)) - 1
@@ -77,8 +69,8 @@ local function open_win(inner)
   local height = math.min(vim.o.lines - vpad * 2, 70)
   local buf = api.nvim_create_buf(false, true)
   local win = api.nvim_open_win(buf, true, {
-    relative = "editor",
-    style = "minimal",
+    relative = 'editor',
+    style = 'minimal',
     width = width,
     border = inner and 'rounded' or nil,
     height = height,
@@ -104,12 +96,12 @@ local function open_win(inner)
 end
 
 local COMMIT_PAT = [[[0-9a-f]\{7,9}]]
-local COMMIT_SINGLE_PAT = fmt([[\<%s\>]], COMMIT_PAT)
-local COMMIT_RANGE_PAT = fmt([[\<%s\.\.%s\>]], COMMIT_PAT, COMMIT_PAT)
+local COMMIT_SINGLE_PAT = string.format([[\<%s\>]], COMMIT_PAT)
+local COMMIT_RANGE_PAT = string.format([[\<%s\.\.%s\>]], COMMIT_PAT, COMMIT_PAT)
 
---- @param disp Display
+--- @param disp Pckr.Display
 local function diff(disp)
-  if not valid_display(disp) then
+  if not disp.buf then
     return
   end
 
@@ -162,17 +154,20 @@ local function diff(disp)
 end
 
 --- Update the text of the display buffer
---- @param disp Display
+--- @param buf? integer
 --- @param srow integer
 --- @param erow integer
 --- @param lines string[]
-local function set_lines(disp, srow, erow, lines)
-  vim.bo[disp.buf].modifiable = true
-  api.nvim_buf_set_lines(disp.buf, srow, erow, true, lines)
-  vim.bo[disp.buf].modifiable = false
+local function set_lines(buf, srow, erow, lines)
+  if not buf then
+    return
+  end
+  vim.bo[buf].modifiable = true
+  api.nvim_buf_set_lines(buf, srow, erow, true, lines)
+  vim.bo[buf].modifiable = false
 end
 
---- @param self Display
+--- @param self Pckr.Display
 --- @param plugin string
 --- @return integer?, integer?
 local function get_task_region(self, plugin)
@@ -200,11 +195,14 @@ local function get_task_region(self, plugin)
   return srow, erow + 1
 end
 
---- @param self Display
+--- @param self Pckr.Display
 --- @param plugin string
 local function clear_task(self, plugin)
+  if not self.buf then
+    return
+  end
   local srow, erow = assert(get_task_region(self, plugin))
-  set_lines(self, srow, erow, {})
+  set_lines(self.buf, srow, erow, {})
   local item = self.items[plugin]
   api.nvim_buf_del_extmark(self.buf, ns, item.mark)
   item.mark = nil
@@ -212,14 +210,14 @@ local function clear_task(self, plugin)
   item.nameMark = nil
 end
 
---- @alias TaskPos 'top' | 'bottom'
+--- @alias Pckr.TaskPos 'top' | 'bottom'
 
 local MAX_COL = 10000
 
---- @param self Display
+--- @param self Pckr.Display
 --- @param plugin string
---- @param message string[]
---- @param pos? TaskPos
+--- @param message {[1]: string, [2]:string?}[][]
+--- @param pos? Pckr.TaskPos
 local function update_task_lines(self, plugin, message, pos)
   local item = self.items[plugin]
 
@@ -236,16 +234,16 @@ local function update_task_lines(self, plugin, message, pos)
 
   local srow, erow = assert(get_task_region(self, plugin))
 
-  local lines = {}
+  local lines = {} --- @type string[]
   for _, l in ipairs(message) do
-    local line = {}
+    local line = {} --- @type string[]
     for _, e in ipairs(l) do
-      line[#line+1] = e[1]
+      line[#line + 1] = e[1]
     end
-    lines[#lines+1] = table.concat(line)
+    lines[#lines + 1] = table.concat(line)
   end
 
-  set_lines(self, srow, erow, lines)
+  set_lines(self.buf, srow, erow, lines)
 
   for i, l in ipairs(message) do
     local offset = 0
@@ -257,7 +255,7 @@ local function update_task_lines(self, plugin, message, pos)
           end_row = row,
           end_col = offset + len,
           hl_group = e[2],
-          id = item.nameMark
+          id = item.nameMark,
         })
       end
 
@@ -283,7 +281,7 @@ local function pad(x)
   return r
 end
 
---- @param self Display
+--- @param self Pckr.Display
 --- @param plugin string
 --- @param static? boolean
 --- @param top? boolean
@@ -301,21 +299,22 @@ local function render_task(self, plugin, static, top)
     icon = config.display.done_sym
   end
 
-  local lines = { {
-    { string.format(' %s ', icon) },
-    { string.format('%s: ', plugin), 'pckrPackageName' },
-    item.message and {item.message} or nil
-  } }
+  --- @type {[1]: string, [2]:string?}[][]
+  local lines = {
+    {
+      { string.format(' %s ', icon) },
+      { string.format('%s: ', plugin), 'pckrPackageName' },
+      item.message and { item.message } or nil,
+    },
+  }
 
   if item.info and item.expanded then
-    local infot = {}
     for _, l in ipairs(pad(item.info)) do
-      infot[#infot+1] = { { l } }
+      lines[#lines + 1]({ { l } })
     end
-    vim.list_extend(lines, infot)
   end
 
-  local pos --- @type TaskPos?
+  local pos --- @type Pckr.TaskPos?
   if top then
     pos = 'top'
   elseif not static then
@@ -326,9 +325,9 @@ local function render_task(self, plugin, static, top)
 end
 
 --- Toggle the display of detailed information for a plugin in the final results display
---- @param disp Display
+--- @param disp Pckr.Display
 local function toggle_info(disp)
-  if not valid_display(disp) then
+  if not disp.buf then
     return
   end
 
@@ -410,9 +409,9 @@ local function prompt_user(headline, body, callback)
 end
 
 --- Prompt a user to revert the latest update for a plugin
---- @param disp Display
+--- @param disp Pckr.Display
 local function prompt_revert(disp)
-  if not valid_display(disp) then
+  if not disp.buf then
     return
   end
   if next(disp.items) == nil then
@@ -430,18 +429,18 @@ local function prompt_revert(disp)
   local actual_update = plugin.revs[1] ~= plugin.revs[2]
   if actual_update then
     prompt_user('Revert update for ' .. plugin_name .. '?', {
-      'Do you want to revert ' ..
-        plugin_name ..
-        ' from ' ..
-        plugin.revs[2] ..
-        ' to ' ..
-        plugin.revs[1] ..
-        '?',
+      'Do you want to revert '
+        .. plugin_name
+        .. ' from '
+        .. plugin.revs[2]
+        .. ' to '
+        .. plugin.revs[1]
+        .. '?',
     }, function(ans)
-        if ans then
-          disp.callbacks.revert_last(plugin)
-        end
-      end)
+      if ans then
+        disp.callbacks.revert_last(plugin)
+      end
+    end)
   else
     log.fmt_warn("%s wasn't updated; can't revert!", plugin_name)
   end
@@ -449,7 +448,7 @@ end
 
 local in_headless = #api.nvim_list_uis() == 0
 
-
+--- @type Pckr.Display
 local display = setmetatable({}, { __index = Display })
 
 display.interactive = not config.display.non_interactive and not in_headless
@@ -468,7 +467,6 @@ local keymaps = {
       display.running = false
       vim.fn.execute('q!', 'silent')
     end,
-
   },
 
   diff = {
@@ -491,7 +489,6 @@ local keymaps = {
       prompt_revert(display)
     end,
   },
-
 }
 
 function Display:check()
@@ -499,11 +496,11 @@ function Display:check()
 end
 
 --- Start displaying a new task
---- @param self Display
+--- @param self Pckr.Display
 --- @param plugin string
 --- @param message string
 Display.task_start = vim.schedule_wrap(function(self, plugin, message)
-  if not valid_display(self) then
+  if not self.buf then
     return
   end
 
@@ -515,9 +512,9 @@ Display.task_start = vim.schedule_wrap(function(self, plugin, message)
 end)
 
 --- Decrement the count of active operations in the headline
---- @param disp Display
+--- @param disp Pckr.Display
 local function decrement_headline_count(disp)
-  if not valid_display(disp) then
+  if not disp.buf then
     return
   end
   local headline = api.nvim_buf_get_lines(disp.buf, 0, 1, false)[1]
@@ -528,9 +525,10 @@ local function decrement_headline_count(disp)
       '%s%s%s',
       headline:sub(1, count_start - 1),
       count - 1,
-      headline:sub(count_end + 1))
+      headline:sub(count_end + 1)
+    )
 
-    set_lines(disp, 0, HEADER_LINES - 1, { updated_headline })
+    set_lines(disp.buf, 0, HEADER_LINES - 1, { updated_headline })
   end
 end
 
@@ -549,13 +547,13 @@ local function normalize_lines(x)
   return r
 end
 
---- @param self Display
+--- @param self Pckr.Display
 --- @param plugin string
 --- @param message string
 --- @param info? string[]
 --- @param success? boolean
 local task_done = vim.schedule_wrap(function(self, plugin, message, info, success)
-  if not valid_display(self) then
+  if not self.buf then
     return
   end
 
@@ -581,7 +579,7 @@ end)
 
 --- @param f fun(p1: string, p2: string): boolean
 function Display:task_sort(f)
-  if not valid_display(self) then
+  if not self.buf then
     return
   end
 
@@ -618,13 +616,13 @@ function Display:task_failed(plugin, message, info)
 end
 
 --- Update the status message of a task in progress
---- @param self Display
+--- @param self Pckr.Display
 --- @param plugin string
 --- @param message string
 --- @param info? string[]
 Display.task_update = vim.schedule_wrap(function(self, plugin, message, info)
   log.fmt_debug('%s: %s', plugin, message)
-  if not valid_display(self) then
+  if not self.buf then
     return
   end
 
@@ -640,36 +638,38 @@ Display.task_update = vim.schedule_wrap(function(self, plugin, message, info)
 end)
 
 --- Update the text of the headline message
---- @param self Display
+--- @param self Pckr.Display
 --- @param message string
 Display.update_headline_message = vim.schedule_wrap(function(self, message)
-  if not valid_display(self) then
+  if not self.buf then
     return
   end
   --- @type string
   local headline = TITLE .. ' - ' .. message
   local width = api.nvim_win_get_width(self.win) - 2
   local pad_width = math.max(math.floor((width - string.len(headline)) / 2.0), 0)
-  set_lines(self, 0, HEADER_LINES - 1, { string.rep(' ', pad_width) .. headline })
+  set_lines(self.buf, 0, HEADER_LINES - 1, { string.rep(' ', pad_width) .. headline })
 end)
 
 --- Display the final results of an operation
---- @param self Display
+--- @param self Pckr.Display
 --- @param time number
 Display.finish = vim.schedule_wrap(function(self, time)
-  if not valid_display(self) then
+  if not self.buf then
     return
   end
 
   display.running = false
-  self:update_headline_message(fmt('finished in %.3fs', time))
+  self:update_headline_message(string.format('finished in %.3fs', time))
 
   for plugin_name, _ in pairs(self.items) do
     local plugin = pckr_plugins[plugin_name]
     if not plugin then
       log.fmt_warn('%s is not in pckr_plugins', plugin_name)
     elseif plugin.breaking_commits and #plugin.breaking_commits > 0 then
-      vim.cmd('syntax match pckrBreakingChange "' .. plugin_name .. '" containedin=pckrStatusSuccess')
+      vim.cmd(
+        'syntax match pckrBreakingChange "' .. plugin_name .. '" containedin=pckrStatusSuccess'
+      )
       for _, commit_hash in ipairs(plugin.breaking_commits) do
         log.fmt_warn('Potential breaking change in commit %s of %s', commit_hash, plugin_name)
         vim.cmd('syntax match pckrBreakingChange "' .. commit_hash .. '" containedin=pckrHash')
@@ -681,16 +681,15 @@ end)
 ---@param str string
 ---@return string
 local function look_back(str)
-  return fmt([[\(%s\)\@%d<=]], str, #str)
+  return string.format([[\(%s\)\@%d<=]], str, #str)
 end
 
 -- TODO: Option for no colors
 ---@param working_sym string
 ---@param done_sym string
 ---@param error_sym string
----@return string[]
 local function do_syntax_cmds(working_sym, done_sym, error_sym)
-  for _, c in ipairs {
+  for _, c in ipairs({
     'syntax clear',
     'syn match pckrWorking /^ ' .. working_sym .. '/',
     'syn match pckrSuccess /^ ' .. done_sym .. '/',
@@ -711,7 +710,7 @@ local function do_syntax_cmds(working_sym, done_sym, error_sym)
     [[syn match pckrString /\v(''|""|(['"]).{-}[^\\]\2)/]],
     [[syn match pckrBool /\<\(false\|true\)\>/]],
     -- [[syn match pckrPackageName /^\ • \zs[^ ]*/]],
-  } do
+  }) do
     vim.cmd(c)
   end
 end
@@ -726,11 +725,11 @@ local function set_config_keymaps()
 end
 
 --- Utility to make the initial display buffer header
---- @param d Display
-local function make_header(d)
+--- @param disp Pckr.Display
+local function make_header(disp)
   local width = api.nvim_win_get_width(0)
   local pad_width = math.floor((width - TITLE:len()) / 2.0)
-  set_lines(d, 0, 1, {
+  set_lines(disp.buf, 0, 1, {
     (' '):rep(pad_width) .. TITLE,
     ' ' .. config.display.header_sym:rep(width - 2),
   })
@@ -745,7 +744,7 @@ local function setup_display(bufnr, winid)
   set_config_keymaps()
   for _, m in pairs(keymaps) do
     local lhs = m.lhs
-    if type(lhs) == "string" then
+    if type(lhs) == 'string' then
       lhs = { lhs }
     end
     lhs = lhs
@@ -772,29 +771,25 @@ local function setup_display(bufnr, winid)
   set_winlocal_option('foldenable', false)
   set_winlocal_option('signcolumn', 'no')
 
-  do_syntax_cmds(
-    config.display.working_sym,
-    config.display.done_sym,
-    config.display.error_sym
-  )
+  do_syntax_cmds(config.display.working_sym, config.display.done_sym, config.display.error_sym)
 
   for _, c in ipairs({
-    { 'pckrBool'            , 'Boolean' },
-    { 'pckrBreakingChange'  , 'WarningMsg' },
-    { 'pckrFail'            , 'ErrorMsg' },
-    { 'pckrHash'            , 'Identifier' },
-    { 'pckrOutput'          , 'Type' },
-    { 'pckrPackageName'     , 'Title' },
+    { 'pckrBool', 'Boolean' },
+    { 'pckrBreakingChange', 'WarningMsg' },
+    { 'pckrFail', 'ErrorMsg' },
+    { 'pckrHash', 'Identifier' },
+    { 'pckrOutput', 'Type' },
+    { 'pckrPackageName', 'Title' },
     { 'pckrPackageNotLoaded', 'Comment' },
-    { 'pckrProgress'        , 'Boolean' },
-    { 'pckrRelDate'         , 'Comment' },
-    { 'pckrStatus'          , 'Type' },
-    { 'pckrStatusCommit'    , 'Constant' },
-    { 'pckrStatusFail'      , 'ErrorMsg' },
-    { 'pckrStatusSuccess'   , 'Constant' },
-    { 'pckrString'          , 'String' },
-    { 'pckrSuccess'         , 'Question' },
-    { 'pckrWorking'         , 'SpecialKey' },
+    { 'pckrProgress', 'Boolean' },
+    { 'pckrRelDate', 'Comment' },
+    { 'pckrStatus', 'Type' },
+    { 'pckrStatusCommit', 'Constant' },
+    { 'pckrStatusFail', 'ErrorMsg' },
+    { 'pckrStatusSuccess', 'Constant' },
+    { 'pckrString', 'String' },
+    { 'pckrSuccess', 'Question' },
+    { 'pckrWorking', 'SpecialKey' },
   }) do
     api.nvim_set_hl(0, c[1], { link = c[2], default = true })
   end
@@ -807,14 +802,10 @@ local M = {}
 M.ask_user = awrap(prompt_user, 3)
 
 --- Open a new display window
---- @param cbs? DisplayCallbacks
---- @return Display?
+--- @param cbs? Pckr.Display.Callbacks
+--- @return Pckr.Display
 function M.open(cbs)
-  if not display.interactive then
-    return
-  end
-
-  if not (display.win and api.nvim_win_is_valid(display.win)) then
+  if display.interactive and not (display.win and api.nvim_win_is_valid(display.win)) then
     display.buf, display.win = open_win()
     setup_display(display.buf, display.win)
   end
@@ -823,16 +814,16 @@ function M.open(cbs)
   display.running = true
 
   display.items = setmetatable({}, {
-    --- @param t table<string,Item>
+    --- @param t table<string,Pckr.Display.Item>
     --- @param k string
-    --- @return Item
+    --- @return Pckr.Display.Item
     __index = function(t, k)
       t[k] = { expanded = false }
       return t[k]
     end,
   })
 
-  set_lines(display, 0, -1, {})
+  set_lines(display.buf, 0, -1, {})
   make_header(display)
 
   return display

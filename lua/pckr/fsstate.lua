@@ -6,7 +6,7 @@ local config = require('pckr.config')
 local fn = vim.fn
 local uv = vim.loop
 
---- @class FSState
+--- @class Pckr.FSState
 --- @field opt     table<string,string>
 --- @field start   table<string,string>
 --- @field missing table<string,string>
@@ -57,7 +57,7 @@ local function toboolean(x)
   return x and true
 end
 
---- @param plugins table<string,Plugin>
+--- @param plugins table<string,Pckr.Plugin>
 --- @param opt_plugins table<string,string> Plugins installed in config.opt_dir
 --- @param start_plugins table<string,string> Plugins installed in config.start_dir
 --- @return table<string,string>
@@ -78,12 +78,12 @@ local function find_extra_plugins(plugins, opt_plugins, start_plugins)
   return extra
 end
 
---- @param plugins table<string,Plugin>
+--- @param plugins table<string,Pckr.Plugin>
 --- @param opt_plugins table<string,string> Plugins installed in config.opt_dir
 --- @param start_plugins table<string,string> Plugins installed in config.start_dir
 --- @return table<string,string>
 --- @return table<string,string>
-local find_dirty_plugins = a.sync(function(plugins, opt_plugins, start_plugins)
+local function find_dirty_plugins(plugins, opt_plugins, start_plugins)
   local dirty_plugins = {} --- @type table<string,string>
   local missing_plugins = {} --- @type table<string,string>
 
@@ -114,8 +114,11 @@ local find_dirty_plugins = a.sync(function(plugins, opt_plugins, start_plugins)
           -- Also need to test for "full URL" plugin names, but normalized to get rid of the
           -- protocol
           local normalized_remote = remote:gsub('https://', ''):gsub('ssh://git@', '')
-          local normalized_plugin_url = plugin.url:gsub('https://', ''):gsub('ssh://git@', ''):gsub('\\', '/')
-          if (normalized_remote ~= normalized_plugin_url) and (repo_name ~= normalized_plugin_url) then
+          local normalized_plugin_url =
+            plugin.url:gsub('https://', ''):gsub('ssh://git@', ''):gsub('\\', '/')
+          if
+            (normalized_remote ~= normalized_plugin_url) and (repo_name ~= normalized_plugin_url)
+          then
             dirty_plugins[plugin.install_path] = plugin_name
           end
         end
@@ -124,10 +127,10 @@ local find_dirty_plugins = a.sync(function(plugins, opt_plugins, start_plugins)
   end
 
   return dirty_plugins, missing_plugins
-end, 3)
+end
 
---- @param plugins table<string,Plugin>
---- @return FSState
+--- @param plugins table<string,Pckr.Plugin>
+--- @return Pckr.FSState
 M.get_fs_state = a.sync(function(plugins)
   log.debug('Updating FS state')
   local opt, start = get_installed_plugins()

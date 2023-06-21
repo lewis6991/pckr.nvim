@@ -49,11 +49,11 @@ local function process_args(args)
   local opts = {} --- @type table<string,boolean>
   local plugins = {} --- @type string[]
 
-  for _, arg in ipairs(args)do
+  for _, arg in ipairs(args) do
     if arg:match('%-%-*w+') then
       opts[arg] = true
     else
-      plugins[#plugins+1] = arg
+      plugins[#plugins + 1] = arg
     end
   end
 

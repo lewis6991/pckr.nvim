@@ -11,7 +11,7 @@ local M = {}
 
 -- TODO(lewis6991): copied from actions.tl - consolidate
 --- @param tasks fun()[]
---- @param disp? Display
+--- @param disp? Pckr.Display
 --- @param kind? string
 --- @return {[1]: string, [2]: string }[]
 local function run_tasks(tasks, disp, kind)
@@ -49,14 +49,14 @@ local function update(path, info)
   local urls = vim.tbl_keys(info)
   table.sort(urls)
 
-  local f = assert(io.open(path, "w"))
-  f:write("return {\n")
+  local f = assert(io.open(path, 'w'))
+  f:write('return {\n')
   for _, url in ipairs(urls) do
     local obj = { commit = info[url] }
-    f:write(fmt("  [%q] = %s,", url, vim.inspect(obj, { newline = ' ', indent = '' })))
+    f:write(fmt('  [%q] = %s,', url, vim.inspect(obj, { newline = ' ', indent = '' })))
     f:write('\n')
   end
-  f:write("}")
+  f:write('}')
   f:close()
 end
 
@@ -85,8 +85,8 @@ M.lock = a.sync(function()
   log.fmt_info('Lockfile created at %s', config.lockfile.path)
 end)
 
---- @param plugin Plugin
---- @param disp Display
+--- @param plugin Pckr.Plugin
+--- @param disp Pckr.Display
 --- @param commit? string
 local restore_plugin = a.sync(function(plugin, disp, commit)
   disp:task_start(plugin.name, fmt('restoring to %s', commit))

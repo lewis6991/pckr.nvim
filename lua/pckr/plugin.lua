@@ -2,29 +2,29 @@ local util = require('pckr.util')
 local log = require('pckr.log')
 local config = require('pckr.config')
 
---- @alias PluginLoader fun(function)
+--- @alias Pckr.PluginLoader fun(function)
 
---- @class UserSpec
+--- @class Pckr.UserSpec
 --- @field [integer] string
 --- @field branch?     string
 --- @field rev         string
 --- @field tag?        string
 --- @field commit?     string
 --- @field start?      boolean
---- @field cond?       boolean|PluginLoader|PluginLoader[]
+--- @field cond?       boolean|Pckr.PluginLoader|Pckr.PluginLoader[]
 --- @field run?        fun()|string
 --- @field config_pre? fun()|string
 --- @field config?     fun()|string
 --- @field lock?       boolean
---- @field requires?   string|(string|UserSpec)[]
+--- @field requires?   string|(string|Pckr.UserSpec)[]
 
---- @class Plugin
+--- @class Pckr.Plugin
 --- @field branch?      string
 --- @field rev?         string
 --- @field tag?         string
 --- @field commit?      string
 --- @field install_path string
---- @field cond?         boolean|PluginLoader|PluginLoader[]
+--- @field cond?         boolean|Pckr.PluginLoader|Pckr.PluginLoader[]
 --- @field run?         fun()|string
 --- @field config_pre?  fun()
 --- @field config?      fun()
@@ -34,7 +34,7 @@ local config = require('pckr.config')
 --- @field name         string
 --- @field revs         {[1]: string?, [2]: string?}
 --- @field required_by? string[]
---- @field type              PluginType
+--- @field type              Pckr.PluginType
 --- @field url               string
 --- @field breaking_commits? string[]
 ---
@@ -56,22 +56,20 @@ local config = require('pckr.config')
 --- @field messages? string[]
 --- @field err? string[]
 
---- @alias PluginType
+--- @alias Pckr.PluginType
 --- | 'git'
 --- | 'local'
 --- | 'unknown'
 
 local M = {
-  --- @type table<string,Plugin>
-  plugins = {}
+  --- @type table<string,Pckr.Plugin>
+  plugins = {},
 }
 
 --- @param path string
---- @return string, PluginType
+--- @return string, Pckr.PluginType
 local function guess_plugin_type(path)
-  if vim.startswith(path, 'git://') or
-    vim.startswith(path, 'http') or
-    path:match('@') then
+  if vim.startswith(path, 'git://') or vim.startswith(path, 'http') or path:match('@') then
     return path, 'git'
   end
 
@@ -103,11 +101,11 @@ local function remove_ending_git_url(url)
   return vim.endswith(url, '.git') and url:sub(1, -5) or url
 end
 
---- @param x string | UserSpec
---- @return UserSpec
+--- @param x string | Pckr.UserSpec
+--- @return Pckr.UserSpec
 local function normspec(x)
   --- @diagnostic disable-next-line:return-type-mismatch
-  return type(x) == "string" and { x } or x
+  return type(x) == 'string' and { x } or x
 end
 
 --- @param x string | fun()
@@ -124,9 +122,9 @@ end
 --- The main logic for adding a plugin (and any dependencies) to the managed set
 -- Can be invoked with (1) a single plugin spec as a string, (2) a single plugin spec table, or (3)
 -- a list of plugin specs
---- @param spec0 string|UserSpec
---- @param required_by? Plugin
---- @return table<string,Plugin>
+--- @param spec0 string|Pckr.UserSpec
+--- @param required_by? Pckr.Plugin
+--- @return table<string,Pckr.Plugin>
 function M.process_spec(spec0, required_by)
   local spec = normspec(spec0)
 
@@ -155,7 +153,7 @@ function M.process_spec(spec0, required_by)
   end
 
   local existing = M.plugins[name]
-  local simple = type(spec0) == "string"
+  local simple = type(spec0) == 'string'
 
   if existing then
     if simple then
@@ -183,7 +181,7 @@ function M.process_spec(spec0, required_by)
     commit = spec.commit,
     start = spec.start,
     simple = simple,
-    cond = spec.cond ~= true and spec.cond or nil,   -- must be function or 'false'
+    cond = spec.cond ~= true and spec.cond or nil, -- must be function or 'false'
     run = spec.run,
     lock = spec.lock,
     url = remove_ending_git_url(url),
@@ -209,7 +207,7 @@ function M.process_spec(spec0, required_by)
 
   if spec.requires then
     local sr = spec.requires
-    local r = type(sr) == "string" and { sr } or sr --[[@as string[] ]]
+    local r = type(sr) == 'string' and { sr } or sr --[[@as string[] ]]
 
     plugin.requires = {}
     for _, s in ipairs(r) do

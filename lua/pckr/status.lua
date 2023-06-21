@@ -10,7 +10,7 @@ local M = {}
 local function format_keys(value)
   --- @type string, string
   local mapping, mode
-  if type(value) == "string" then
+  if type(value) == 'string' then
     mapping = value
     mode = ''
   else
@@ -30,9 +30,9 @@ end
 ---@param formatter fun(_: any): string
 ---@return string|string[]
 local function unpack_config_value(value, formatter)
-  if type(value) == "string" then
+  if type(value) == 'string' then
     return { value }
-  elseif type(value) == "table" then
+  elseif type(value) == 'table' then
     local result = {}
     for _, k in ipairs(value) do
       local item = formatter and formatter(k) or k
@@ -74,7 +74,7 @@ local plugin_keys_exclude = {
   simple = true,
 }
 
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @return number
 local function add_profile_data(plugin)
   local total_exec_time = 0
@@ -98,14 +98,16 @@ local function add_profile_data(plugin)
   return plugin.plugin_time
 end
 
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @return string[]
 local function get_plugin_status(plugin)
   local config_lines = {}
-  for key, value in pairs(plugin --[[@as table<string,any>]]) do
+  for key, value in
+    pairs(plugin --[[@as table<string,any>]])
+  do
     if not plugin_keys_exclude[key] then
       local details = format_values(key, value)
-      if type(details) == "string" then
+      if type(details) == 'string' then
         -- insert a position one so that one line details appear above multiline ones
         table.insert(config_lines, 1, fmt('%s: %s', key, details))
       else
@@ -117,7 +119,7 @@ local function get_plugin_status(plugin)
   return config_lines
 end
 
---- @param plugin Plugin
+--- @param plugin Pckr.Plugin
 --- @return string
 local function load_state(plugin)
   if not plugin.loaded then
@@ -162,7 +164,9 @@ M.run = a.sync(function()
     return plugins[k1].plugin_time > plugins[k2].plugin_time
   end)
 
-  disp:update_headline_message(fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins), total_time))
+  disp:update_headline_message(
+    fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins), total_time)
+  )
 end)
 
 return M

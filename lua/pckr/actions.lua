@@ -13,12 +13,13 @@ local pckr_plugins = require('pckr.plugin').plugins
 
 local M = {}
 
---- @class Result
+--- @class Pckr.Result
 --- @field err? string[]
 --- Used for moves
 --- @field from string
 --- @field to string
 
+--- @return Pckr.Display
 local function open_display()
   return display.open({
     diff = function(plugin, commit, callback)
@@ -33,7 +34,7 @@ local function open_display()
 end
 
 --- @param tasks (fun(function))[]
---- @param disp Display
+--- @param disp Pckr.Display
 --- @param kind string
 local function run_tasks(tasks, disp, kind)
   if #tasks == 0 then
@@ -86,7 +87,7 @@ local function helptags_stale(dir)
   return txt_newest > tag_oldest
 end
 
---- @param results table<string,Result>
+--- @param results table<string,Pckr.Result>
 local function update_helptags(results)
   local paths = {} --- @type string[]
   for plugin_name, r in pairs(results) do
@@ -104,8 +105,8 @@ local function update_helptags(results)
   end
 end
 
---- @param plugin Plugin
---- @param disp Display
+--- @param plugin Pckr.Plugin
+--- @param disp Pckr.Display
 --- @return string[]?
 local post_update_hook = a.sync(function(plugin, disp)
   if plugin.run or plugin.start then
@@ -129,7 +130,7 @@ local post_update_hook = a.sync(function(plugin, disp)
       return { 'Error running post update hook: ' .. vim.inspect(err) }
     end
   elseif type(run_task) == 'string' then
-    disp:task_update(plugin.name, string.format('running post update hook...(\"%s\")', run_task))
+    disp:task_update(plugin.name, string.format('running post update hook...("%s")', run_task))
     if vim.startswith(run_task, ':') then
       -- Run a vim command
       vim.cmd(run_task:sub(2))
@@ -144,9 +145,9 @@ local post_update_hook = a.sync(function(plugin, disp)
   end
 end, 2)
 
---- @param plugin Plugin
---- @param disp Display
---- @param installs table<string,Result>
+--- @param plugin Pckr.Plugin
+--- @param disp Pckr.Display
+--- @param installs table<string,Pckr.Result>
 --- @return string, string[]?
 local install_task = a.sync(function(plugin, disp, installs)
   disp:task_start(plugin.name, 'installing...')
@@ -178,8 +179,8 @@ local install_task = a.sync(function(plugin, disp, installs)
 end, 3)
 
 --- @param missing_plugins string[]
---- @param disp Display
---- @param installs table<string,Result>
+--- @param disp? Pckr.Display
+--- @param installs table<string,Pckr.Result>
 --- @return (fun(function))[]
 local function get_install_tasks(missing_plugins, disp, installs)
   if #missing_plugins == 0 then
@@ -194,9 +195,9 @@ local function get_install_tasks(missing_plugins, disp, installs)
   return tasks
 end
 
---- @param plugin Plugin
---- @param moves table<string,Result>
---- @param fs_state FSState
+--- @param plugin Pckr.Plugin
+--- @param moves table<string,Pckr.Result>
+--- @param fs_state Pckr.FSState
 local function move_plugin(plugin, moves, fs_state)
   local from --- @type string
   local to --- @type string
@@ -225,9 +226,9 @@ local function move_plugin(plugin, moves, fs_state)
   end
 end
 
---- @param plugin Plugin
---- @param disp Display
---- @param updates table<string,Result>
+--- @param plugin Pckr.Plugin
+--- @param disp Pckr.Display
+--- @param updates table<string,Pckr.Result>
 --- @return string?, string[]?
 local update_task = a.sync(function(plugin, disp, updates)
   disp:task_start(plugin.name, 'updating...')
@@ -279,8 +280,8 @@ local update_task = a.sync(function(plugin, disp, updates)
 end, 3)
 
 --- @param update_plugins string[]
---- @param disp Display
---- @param updates table<string,Result>
+--- @param disp Pckr.Display
+--- @param updates table<string,Pckr.Result>
 --- @return (fun(function))[]
 local function get_update_tasks(update_plugins, disp, updates)
   local tasks = {} --- @type (fun(function))[]
@@ -301,16 +302,17 @@ local function get_update_tasks(update_plugins, disp, updates)
   return tasks
 end
 
---- @param plugins table<string,Plugin>
+--- @param plugins table<string,Pckr.Plugin>
 --- @param extra_plugins string[]
---- @param moves table<string,Result>
---- @param fs_state FSState
+--- @param moves table<string,Pckr.Result>
+--- @param fs_state Pckr.FSState
 local function fix_plugin_types(plugins, extra_plugins, moves, fs_state)
   log.debug('Fixing plugin types')
   -- NOTE: This function can only be run on plugins already installed
   for _, v in ipairs(extra_plugins) do
     local plugin = plugins[v]
-    local wrong_install_dir = util.join_paths(plugin.start and config.opt_dir or config.start_dir, plugin.name)
+    local wrong_install_dir =
+      util.join_paths(plugin.start and config.opt_dir or config.start_dir, plugin.name)
     if vim.loop.fs_stat(wrong_install_dir) then
       move_plugin(plugin, moves, fs_state)
     end
@@ -319,8 +321,8 @@ local function fix_plugin_types(plugins, extra_plugins, moves, fs_state)
 end
 
 -- Find and remove any plugins not currently configured for use
---- @param plugins table<string,Plugin>
---- @param fs_state? FSState
+--- @param plugins table<string,Pckr.Plugin>
+--- @param fs_state? Pckr.FSState
 --- @param removals? string[]
 local do_clean = a.sync(function(plugins, fs_state, removals)
   fs_state = fs_state or fsstate.get_fs_state(plugins)
@@ -344,7 +346,9 @@ local do_clean = a.sync(function(plugins, fs_state, removals)
     table.insert(lines, '  - ' .. path)
   end
 
-  if config.autoremove or display.ask_user('Removing the following directories. OK? (y/N)', lines) then
+  if
+    config.autoremove or display.ask_user('Removing the following directories. OK? (y/N)', lines)
+  then
     if removals then
       for r, _ in pairs(plugins_to_remove) do
         removals[#removals + 1] = r
@@ -385,7 +389,7 @@ M.install = a.sync(function(install_plugins, _opts, __cb)
   log.debug('Gathering install tasks')
 
   local disp = open_display()
-  local installs = {}  --- @type table<string,Result>
+  local installs = {} --- @type table<string,Pckr.Result>
 
   local delta = util.measure(function()
     local install_tasks = get_install_tasks(install_plugins, disp, installs)
@@ -445,10 +449,10 @@ M.sync = a.void(function(update_plugins)
   local extra_plugins = util.partition(vim.tbl_values(fs_state.extra), update_plugins)
 
   local results = {
-    moves = {},
-    removals = {},
-    installs = {},
-    updates = {},
+    moves = {}, --- @type table<string,Pckr.Result>
+    removals = {}, --- @type string[]
+    installs = {}, --- @type table<string,Pckr.Result>
+    updates = {}, --- @type table<string,Pckr.Result>
   }
 
   fix_plugin_types(pckr_plugins, extra_plugins, results.moves, fs_state)
@@ -459,7 +463,8 @@ M.sync = a.void(function(update_plugins)
 
   do_clean(pckr_plugins, fs_state, results.removals)
 
-  local missing_plugins, installed_plugins = util.partition(vim.tbl_values(fs_state.missing), update_plugins)
+  local missing_plugins, installed_plugins =
+    util.partition(vim.tbl_values(fs_state.missing), update_plugins)
 
   a.main()
 

@@ -4,7 +4,7 @@ local util = require('pckr.util')
 
 local uv = vim.loop
 
---- @class PluginHandler
+--- @class Pckr.PluginHandler
 local M = {}
 
 -- Due to #679, we know that fs_symlink requires admin privileges on Windows. This is a workaround,
@@ -41,8 +41,8 @@ local sleep = a.wrap(function(ms, cb)
   vim.defer_fn(cb, ms)
 end, 2)
 
---- @param plugin Plugin
---- @param disp Display
+--- @param plugin Pckr.Plugin
+--- @param disp Pckr.Display
 --- @return string[]?
 M.updater = a.sync(function(plugin, disp)
   local from = uv.fs_realpath(util.strip_trailing_sep(plugin.url))

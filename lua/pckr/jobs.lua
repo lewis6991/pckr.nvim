@@ -3,7 +3,7 @@ local uv = vim.loop
 local a = require('pckr.async')
 local log = require('pckr.log')
 
-local M = {JobResult = {}, Opts = {}, }
+local M = { JobResult = {}, Opts = {} }
 
 --- @class JobResult
 --- @field exit_code integer
@@ -22,10 +22,11 @@ local M = {JobResult = {}, Opts = {}, }
 --- @param options table
 local function trace(cmd, options)
   log.fmt_trace(
-    "Running job: cmd = %s, args = %s, cwd = %s",
+    'Running job: cmd = %s, args = %s, cwd = %s',
     cmd,
     vim.inspect(options.args),
-    options.cwd)
+    options.cwd
+  )
 end
 
 --- Wrapper for vim.loop.spawn. Takes a command, options, and callback just like
@@ -79,7 +80,6 @@ local function spawn(cmd, options, callback)
   end
 end
 
-
 --- Main exposed function for the jobs module. Takes a task and options and returns an async
 -- function that will run the task with the given opts via vim.loop.spawn
 --- @param task string|string[]
@@ -93,7 +93,7 @@ M.run = a.wrap(function(task, opts, callback)
   local stdout = uv.new_pipe(false)
   local stderr = uv.new_pipe(false)
 
-  if type(task) == "string" then
+  if type(task) == 'string' then
     local shell = os.getenv('SHELL') or vim.o.shell
     local minus_c = shell:find('cmd.exe$') and '/c' or '-c'
     task = { shell, minus_c, task }
@@ -109,13 +109,13 @@ M.run = a.wrap(function(task, opts, callback)
     env = opts.env,
     hide = true,
   }, function(exit_code, signal)
-      callback({
-        exit_code = exit_code,
-        signal = signal,
-        stdout = stdout_data,
-        stderr = stderr_data,
-      })
-    end)
+    callback({
+      exit_code = exit_code,
+      signal = signal,
+      stdout = stdout_data,
+      stderr = stderr_data,
+    })
+  end)
 
   for kind, pipe in pairs({ stdout = stdout, stderr = stderr }) do
     if pipe then
@@ -139,7 +139,6 @@ M.run = a.wrap(function(task, opts, callback)
       end)
     end
   end
-
 end, 3)
 
 return M
