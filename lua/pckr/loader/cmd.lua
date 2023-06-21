@@ -1,4 +1,5 @@
 --- @param cmd string
+--- @return fun(_: fun())
 return function(cmd)
   --- @param loader fun()
   return function(loader)

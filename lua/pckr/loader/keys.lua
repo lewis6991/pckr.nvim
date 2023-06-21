@@ -1,5 +1,6 @@
 --- @param mode string
 --- @param key string
+--- @return fun(_: fun())
 return function(mode, key)
   --- @param loader fun()
   return function(loader)

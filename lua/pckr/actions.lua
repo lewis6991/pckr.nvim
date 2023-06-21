@@ -508,4 +508,11 @@ M.restore = a.sync(function(_, _)
   require('pckr.lockfile').restore()
 end, 2)
 
+M.log = function(_, _)
+  local messages = require('pckr.log').messages
+  for _, m in ipairs(messages) do
+    vim.api.nvim_echo({m}, false, {})
+  end
+end
+
 return M

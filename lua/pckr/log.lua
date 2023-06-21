@@ -109,6 +109,7 @@ end
 
 local cache_dir = vim.fn.stdpath('cache')
 
+local messages = {} --- @type {[1]: string, [1]: string}[]
 local outfile = string.format('%s/pckr.nvim.log', cache_dir)
 vim.fn.mkdir(cache_dir, 'p')
 
@@ -146,6 +147,7 @@ local function log_at_level_console(level_config, message_maker, ...)
   end)
 end
 
+--- @type string
 local HOME = vim.env.HOME
 
 ---@param level_config LevelConfig
@@ -164,16 +166,17 @@ local function log_at_level_file(level_config, message_maker, ...)
   --- @type string
   local lineinfo = src .. ':' .. info.currentline
 
-  fp:write(
-    string.format(
-      '[%-6s%s %s] %s: %s\n',
-      level_config.name:upper(),
-      os.date('%H:%M:%S'),
-      vim.loop.hrtime() - start_time,
-      lineinfo,
-      message_maker(...)
-    )
+  local msg = string.format(
+    '[%-6s%s %s] %s: %s\n',
+    level_config.name:upper(),
+    os.date('%H:%M:%S'),
+    vim.loop.hrtime() - start_time,
+    lineinfo,
+    message_maker(...)
   )
+
+  fp:write(msg)
+  messages[#messages+1] = {msg, level_config.hl}
 
   fp:close()
 end
@@ -209,22 +212,24 @@ end
 --- @field fmt_warn  fun(fmt: string, ...: any)
 --- @field fmt_error fun(fmt: string, ...: any)
 --- @field fmt_fatal fun(fmt: string, ...: any)
-local log = {}
+local M = {}
 
 for i, x in ipairs(MODES) do
   --- @diagnostic disable-next-line:no-unknown
-  log[x.name] = function(...)
+  M[x.name] = function(...)
     log_at_level(i, x, function(...)
       return table.concat(stringify(...), ' ')
     end, ...)
   end
 
   --- @diagnostic disable-next-line:no-unknown
-  log['fmt_' .. x.name] = function(fmt, ...)
+  M['fmt_' .. x.name] = function(fmt, ...)
     log_at_level(i, x, function(...)
       return fmt:format(unpack(stringify(...)))
     end, ...)
   end
 end
 
-return log
+M.messages = messages
+
+return M

@@ -1,5 +1,6 @@
 --- @param events string[]
 --- @param pattern string?
+--- @return fun(_: fun())
 return function(events, pattern)
   return function(loader)
     vim.api.nvim_create_autocmd(events, {
