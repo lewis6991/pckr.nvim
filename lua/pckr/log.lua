@@ -154,12 +154,12 @@ local HOME = vim.env.HOME
 ---@param message_maker fun(...): string
 ---@param ... any
 local function log_at_level_file(level_config, message_maker, ...)
-  -- Output to log file
-  local fp, err = io.open(outfile, 'a')
-  if not fp then
-    print(err)
-    return
-  end
+  -- -- Output to log file
+  -- local fp, err = io.open(outfile, 'a')
+  -- if not fp then
+  --   print(err)
+  --   return
+  -- end
 
   local info = debug.getinfo(4, 'Sl')
   local src = info.short_src:gsub(HOME, '~')
@@ -175,10 +175,10 @@ local function log_at_level_file(level_config, message_maker, ...)
     message_maker(...)
   )
 
-  fp:write(msg)
+  -- fp:write(msg)
   messages[#messages+1] = {msg, level_config.hl}
 
-  fp:close()
+  -- fp:close()
 end
 
 ---comment
