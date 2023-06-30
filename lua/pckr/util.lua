@@ -70,4 +70,30 @@ function util.file_lines(file)
   return text
 end
 
+--- @param path string
+--- @param fn fun(_: string, _: string, _: string): boolean?
+local function ls(path, fn)
+  local handle = vim.loop.fs_scandir(path)
+  while handle do
+    local name, t = vim.loop.fs_scandir_next(handle)
+    if not name or not t then
+      break
+    end
+    if fn(util.join_paths(path, name), name, t) == false then
+      break
+    end
+  end
+end
+
+--- @param path string
+--- @param fn fun(_: string, _: string, _: string): boolean?
+function util.walk(path, fn)
+  ls(path, function(child, name, ftype)
+    if ftype == 'directory' then
+      util.walk(child, fn)
+    end
+    fn(child, name, ftype)
+  end)
+end
+
 return util

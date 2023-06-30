@@ -10,6 +10,3 @@ vim.api.nvim_create_user_command(
     end
   }
 )
-
--- Run 'config' keys in user spec.
-require'pckr.loader'.run_configs()

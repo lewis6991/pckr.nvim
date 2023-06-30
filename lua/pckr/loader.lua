@@ -1,8 +1,6 @@
 local log = require('pckr.log')
 local util = require('pckr.util')
-
---- @type fun()[]
-local plugin_configs = {}
+local config = require('pckr.config')
 
 --- @param name string
 --- @return fun(err: string)
@@ -28,42 +26,6 @@ local function apply_config(plugin, field)
     log.fmt_debug('%s for %s took %fms', field, plugin.name, delta * 1000)
     plugin.config_time = delta * 1000
   end, config_error_handler(plugin.name))
-end
-
---- @param path string
---- @param fn fun(_: string, _: string, _: string): boolean?
-local function ls(path, fn)
-  local handle = vim.loop.fs_scandir(path)
-  while handle do
-    local name, t = vim.loop.fs_scandir_next(handle)
-    if not name or not t then
-      break
-    end
-    if fn(util.join_paths(path, name), name, t) == false then
-      break
-    end
-  end
-end
-
---- @param path string
---- @param fn fun(_: string, _: string, _: string): boolean?
-local function walk(path, fn)
-  ls(path, function(child, name, ftype)
-    if ftype == 'directory' then
-      walk(child, fn)
-    end
-    fn(child, name, ftype)
-  end)
-end
-
-local function source_after(install_path)
-  walk(util.join_paths(install_path, 'after', 'plugin'), function(path, _, t)
-    local ext = path:sub(-4)
-    if t == 'file' and (ext == '.lua' or ext == '.vim') then
-      log.fmt_debug('sourcing %s', path)
-      vim.cmd.source({ path, mods = { silent = true } })
-    end
-  end)
 end
 
 local M = {}
@@ -92,6 +54,93 @@ _G.loadfile = function(path)
   end
 end
 
+local function source_runtime(...)
+  local dir = table.concat({ ... }, "/")
+  ---@type string[], string[]
+  local vim_files, lua_files = {}, {}
+  util.walk(dir, function(path, name, t)
+    local ext = name:sub(-3)
+    name = name:sub(1, -5)
+    if (t == "file" or t == "link") then
+      if ext == "lua" then
+        lua_files[#lua_files + 1] = path
+      elseif ext == "vim" then
+        vim_files[#vim_files + 1] = path
+      end
+    end
+  end)
+  for _, path in ipairs(vim_files) do
+    vim.cmd.source(path)
+  end
+  for _, path in ipairs(lua_files) do
+    vim.cmd.source(path)
+  end
+end
+
+--- This does the same as runtime.c:add_pack_dir_to_rtp()
+--- - find first after
+--- - insert `path` right before first after or at the end
+--- - insert after dir right before first after or at the end
+--- @param path string
+local function add_to_rtp(path)
+  local rtp = vim.api.nvim_get_runtime_file('', true)
+  local idx_dir --- @type integer?
+
+  for i, p in ipairs(rtp) do
+    if util.is_windows then
+      p = vim.fs.normalize(p)
+    end
+    if vim.endswith(p, '/after') then
+      idx_dir = i
+      break
+    end
+  end
+
+  table.insert(rtp, idx_dir or (#rtp + 1), path)
+
+  local after = path .. '/after'
+  if vim.loop.fs_stat(after) then
+    rtp[#rtp+1] = after
+    table.insert(rtp, (idx_dir + 1) or (#rtp + 1), after)
+  end
+
+  vim.opt.rtp = rtp
+end
+
+--- Optimized version of :packadd that doesn't (double) scan 'packpath' since
+--- the full paths are already known.
+---
+--- Implements nvim/runtime.c:load_pack_plugin()
+---
+--- Make sure plugin is added to 'runtimepath' first.
+---@param plugin Pckr.Plugin
+---@param force boolean
+local function packadd(plugin, force)
+  if config.native_packadd then
+    vim.cmd.packadd({ plugin.name, bang = force })
+    return
+  end
+
+  if vim.v.vim_did_enter ~= 1 and force then
+    -- Do not sourcv
+    return
+  end
+
+  local path = plugin.install_path
+
+  source_runtime(path, "plugin")
+
+  if (vim.g.did_load_filetypes or 0) > 0 then
+    vim.cmd.augroup('filetypedetect')
+    source_runtime(path, 'ftdetect')
+    vim.cmd.augroup("END")
+  end
+
+  if vim.v.vim_did_enter == 1 then
+    source_runtime(path, "after/plugin")
+  end
+end
+
 --- @param plugin Pckr.Plugin
 function M.load_plugin(plugin)
   if plugin.loaded then
@@ -112,6 +161,9 @@ function M.load_plugin(plugin)
   -- config tries to load this same plugin again
   plugin.loaded = true
 
+  log.fmt_debug('Loading %s', plugin.name)
+  add_to_rtp(plugin.install_path)
+
   if plugin.requires then
     log.fmt_debug('Loading dependencies of %s', plugin.name)
     local all_plugins = require('pckr.plugin').plugins
@@ -122,22 +174,8 @@ function M.load_plugin(plugin)
   end
 
   log.fmt_debug('Loading %s', plugin.name)
-  if vim.v.vim_did_enter == 0 then
-    if not plugin.start then
-      vim.cmd.packadd({ plugin.name, bang = true })
-    end
-
-    plugin_configs[#plugin_configs + 1] = function()
-      apply_config(plugin, 'config')
-    end
-  else
-    if not plugin.start then
-      vim.cmd.packadd(plugin.name)
-      source_after(plugin.install_path)
-    end
-
-    apply_config(plugin, 'config')
-  end
+  packadd(plugin, config.native_loadplugins)
+  apply_config(plugin, 'config')
 end
 
 --- @generic T
@@ -147,8 +185,25 @@ local function ensurelist(x)
   return type(x) == 'table' and x or { x }
 end
 
---- @param plugins table<string,Pckr.Plugin>
-function M.setup(plugins)
+local function do_loadplugins()
+  -- Load plugins from the original rtp, excluding after
+  for _, path in ipairs(vim.opt.rtp:get()) do
+    if not path:find('after/?$') then
+      source_runtime(path, "plugin")
+    end
+  end
+
+  for _, path in ipairs(vim.opt.rtp:get()) do
+    if path:find('after/?$') then
+      source_runtime(path, "plugin")
+    end
+  end
+end
+
+local function load_plugins()
+  local plugins = require'pckr.plugin'.plugins
+
+  -- Load pckr plugins
   for _, plugin in pairs(plugins) do
     if not plugin.cond then
       M.load_plugin(plugin)
@@ -162,11 +217,14 @@ function M.setup(plugins)
   end
 end
 
-function M.run_configs()
-  for _, cfg in ipairs(plugin_configs) do
-    cfg()
+function M.setup()
+  log.debug('LOADING PLUGINS')
+
+  load_plugins()
+
+  if not config.native_loadplugins then
+    do_loadplugins()
   end
-  plugin_configs = {}
 end
 
 return M

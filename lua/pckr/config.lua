@@ -38,6 +38,9 @@ local join_paths = util.join_paths
 --- @field git          Pckr.Config.Git
 --- @field log          Pckr.Config.Log
 --- @field lockfile     Pckr.Config.Lockfile
+--- @field native_packadd     boolean
+--- @field native_loadplugins boolean Let pckr handle 'loadplugins'. Note: make
+---                                   sure to populate rtp before calling pckr.
 
 --- @type Pckr.Config
 local default_config = {
@@ -72,6 +75,8 @@ local default_config = {
   },
   autoremove = false,
   autoinstall = true,
+  native_packadd = false,
+  native_loadplugins = false,
 }
 
 local config = vim.deepcopy(default_config)

@@ -10,8 +10,15 @@ local did_setup = false
 --- @param user_config? Pckr.Config
 local function setup(user_config)
   log.debug('setup')
-
   config(user_config)
+
+  -- loaded manually in loader.lua
+  vim.go.loadplugins = config.native_loadplugins
+
+  if not config.native_packadd then
+    -- We will handle loading of all plugins so minimise packpath
+    vim.go.packpath = vim.env.VIMRUNTIME
+  end
 
   for _, dir in ipairs({ config.opt_dir, config.start_dir }) do
     if vim.fn.isdirectory(dir) == 0 then
@@ -23,11 +30,6 @@ local function setup(user_config)
 end
 
 local M = {}
-
-local function load_plugins()
-  log.debug('LOADING PLUGINS')
-  loader.setup(plugin.plugins)
-end
 
 --- @param spec Pckr.UserSpec
 function M.add(spec)
@@ -52,10 +54,10 @@ function M.add(spec)
     local cwin = api.nvim_get_current_win()
     require('pckr.actions').install(to_install, nil, function()
       -- Run loader in initial window so window options set properly
-      api.nvim_win_call(cwin, load_plugins)
+      api.nvim_win_call(cwin, loader.setup)
     end)
   else
-    load_plugins()
+    loader.setup()
   end
 end
 
