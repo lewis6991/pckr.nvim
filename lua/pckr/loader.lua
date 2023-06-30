@@ -55,7 +55,7 @@ _G.loadfile = function(path)
 end
 
 local function source_runtime(...)
-  local dir = table.concat({ ... }, "/")
+  local dir = vim.fs.joinpath(...)
   ---@type string[], string[]
   local vim_files, lua_files = {}, {}
   util.walk(dir, function(path, name, t)
