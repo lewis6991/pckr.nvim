@@ -89,7 +89,7 @@ local function git_run(args, opts)
   opts = opts or {}
   opts.env = opts.env or job_env
   local obj = jobs.run({ config.git.cmd, unpack(args) }, opts)
-  local ok = obj.code == 0
+  local ok = obj.code == 0 and obj.signal == 0
   if ok then
     return true, split(obj.stdout)
   end
@@ -382,7 +382,7 @@ end
 
 --- @param plugin Pckr.Plugin
 --- @param update_task fun(msg: string, info?: string[])
---- @param timeout integer
+--- @param timeout integer Timeout in ms
 --- @return boolean, string[]
 local function clone(plugin, update_task, timeout)
   update_task('cloning...')
@@ -443,7 +443,7 @@ local function install(plugin, disp)
 
   sanitize_path(plugin.install_path)
 
-  local ok, out = clone(plugin, update_task, config.git.clone_timeout)
+  local ok, out = clone(plugin, update_task, config.git.clone_timeout * 1000)
   if not ok then
     return nil, out
   end
