@@ -86,6 +86,7 @@ local function open_win(inner)
   vim.bo[buf].buflisted = false
   vim.bo[buf].swapfile = false
   vim.bo[buf].bufhidden = 'wipe'
+  vim.bo[buf].modifiable = false
 
   if not vim.g.colors_name then
     -- default colorscheme; make NormalFloat palatable
@@ -94,6 +95,21 @@ local function open_win(inner)
 
   return buf, win
 end
+
+--- Update the text of the display buffer
+--- @param buf? integer
+--- @param srow integer
+--- @param erow integer
+--- @param lines string[]
+local function set_lines(buf, srow, erow, lines)
+  if not buf then
+    return
+  end
+  vim.bo[buf].modifiable = true
+  api.nvim_buf_set_lines(buf, srow, erow, true, lines)
+  vim.bo[buf].modifiable = false
+end
+
 
 local COMMIT_PAT = [[[0-9a-f]\{7,9}]]
 local COMMIT_SINGLE_PAT = string.format([[\<%s\>]], COMMIT_PAT)
@@ -145,26 +161,12 @@ local function diff(disp)
         return
       end
       local buf = open_win(true)
-      api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+      set_lines(buf, 0, -1, lines)
       api.nvim_buf_set_name(buf, commit)
       vim.keymap.set('n', 'q', '<cmd>close!<cr>', { buffer = buf, silent = true, nowait = true })
       vim.bo[buf].filetype = 'git'
     end)
   end)
-end
-
---- Update the text of the display buffer
---- @param buf? integer
---- @param srow integer
---- @param erow integer
---- @param lines string[]
-local function set_lines(buf, srow, erow, lines)
-  if not buf then
-    return
-  end
-  vim.bo[buf].modifiable = true
-  api.nvim_buf_set_lines(buf, srow, erow, true, lines)
-  vim.bo[buf].modifiable = false
 end
 
 --- @param self Pckr.Display

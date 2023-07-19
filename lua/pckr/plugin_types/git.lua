@@ -243,20 +243,6 @@ local function get_current_branch(plugin)
   error('Could not get current branch for ' .. plugin.install_path)
 end
 
----@param messages string|string[]
----@return string[]
-local function split_messages(messages)
-  if type(messages) == 'string' then
-    messages = { messages }
-  end
-  local lines = {}
-  for _, message in ipairs(messages) do
-    vim.list_extend(lines, vim.split(message, '\n'))
-    table.insert(lines, '')
-  end
-  return lines
-end
-
 ---@param x string
 ---@return string[]
 local function process_progress(x)
@@ -586,7 +572,7 @@ M.diff = async(function(plugin, commit, callback)
   })
 
   if ok then
-    callback(split_messages(out))
+    callback(out)
   else
     callback(nil, out)
   end
