@@ -1,12 +1,11 @@
 ---
 name: Bug report
-about: Report a bug in packer.nvim
+about: Report a bug in pckr.nvim
 labels: bug
 
 ---
 
-<!-- Before creating an issue, please search the issue tracker and make sure packer.nvim is up to date -->
-<!-- If your issue is a general usage question, please create a GitHub discussions thread: https://github.com/wbthomason/packer.nvim/discussions -->
+<!-- Before creating an issue, please search the issue tracker and make sure pckr.nvim is up to date -->
 
 - `nvim --version`:
 - `git --version`:
@@ -19,26 +18,11 @@ labels: bug
 
 ### Expected behaviour
 
-### packer files
+### pckr files
 
 <details>
 <summary>Plugin specification file(s)</summary>
 
-Post or link your plugin specification files here, if you aren't able to provide a minimal
-reproducer
-
-</details>
-
-<details>
-<summary>packer log file</summary>
-
-Post the contents of ~/.cache/nvim/packer.nvim.log here
-
-</details>
-
-<details>
-<summary>packer compiled file</summary>
-
-Post the contents of `packer_compiled.vim` here
+Paste your plugin specification files here, if you aren't able to provide a minimal reproducer
 
 </details>
