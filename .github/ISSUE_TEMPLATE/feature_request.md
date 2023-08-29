@@ -1,12 +1,11 @@
 ---
 name: Feature request
-about: Suggest a feature for packer.nvim
+about: Suggest a feature for pckr.nvim
 labels: enhancement
 
 ---
 
-<!-- Before creating an issue, please search the issue tracker and make sure packer.nvim is up to date -->
-<!-- If your issue is a general usage question, please create a GitHub discussions thread: https://github.com/wbthomason/packer.nvim/discussions -->
+<!-- Before creating an issue, please search the issue tracker and make sure pckr.nvim is up to date -->
 
 ### Describe the feature
 
