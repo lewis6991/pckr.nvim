@@ -32,7 +32,7 @@ Main differences to pckr.nvim:
 - Lockfile support
 
 ## Requirements
-- **You need to be running Neovim v0.9.0+**
+- **You need to be running Neovim v0.10.0+**
 - If you are on Windows 10, you need developer mode enabled in order to use local plugins (creating
   symbolic links requires admin privileges on Windows - credit to @TimUntersberger for this note)
 
