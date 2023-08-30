@@ -1,6 +1,7 @@
 -- Interface with Neovim job control and provide a simple job sequencing structure
 local a = require('pckr.async')
 local log = require('pckr.log')
+local system = require('pckr.system')
 
 local M = {}
 
@@ -23,7 +24,7 @@ M.run = a.wrap(function(task, opts, callback)
     opts.cwd
   )
 
-  vim.system(task, opts, function(obj)
+  system(task, opts, function(obj)
     if callback then
       callback(obj)
     end
