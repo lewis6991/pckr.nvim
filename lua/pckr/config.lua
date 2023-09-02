@@ -26,20 +26,20 @@ local join_paths = util.join_paths
 --- @class Pckr.Config.Lockfile
 --- @field path string
 
---- @class Pckr.Config
---- @field package_root string
---- @field pack_dir     string
---- @field max_jobs     integer?
---- @field start_dir    string
---- @field opt_dir      string
---- @field autoremove   boolean
---- @field autoinstall  boolean
---- @field display      Pckr.Config.Display
---- @field git          Pckr.Config.Git
---- @field log          Pckr.Config.Log
---- @field lockfile     Pckr.Config.Lockfile
---- @field native_packadd     boolean
---- @field native_loadplugins boolean Let pckr handle 'loadplugins'. Note: make
+--- @class (exact) Pckr.Config
+--- @field package_root? string
+--- @field pack_dir?     string
+--- @field max_jobs?     integer?
+--- @field start_dir?    string
+--- @field opt_dir?      string
+--- @field autoremove?   boolean
+--- @field autoinstall?  boolean
+--- @field display?      Pckr.Config.Display
+--- @field git?          Pckr.Config.Git
+--- @field log?          Pckr.Config.Log
+--- @field lockfile?     Pckr.Config.Lockfile
+--- @field native_packadd?     boolean
+--- @field native_loadplugins? boolean Let pckr handle 'loadplugins'. Note: make
 ---                                   sure to populate rtp before calling pckr.
 
 --- @type Pckr.Config

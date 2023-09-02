@@ -96,12 +96,13 @@ local function add_to_rtp(path)
     end
   end
 
-  table.insert(rtp, idx_dir or (#rtp + 1), path)
+  idx_dir = idx_dir or #rtp + 1
+
+  table.insert(rtp, idx_dir, path)
 
   local after = path .. '/after'
   if vim.loop.fs_stat(after) then
-    rtp[#rtp+1] = after
-    table.insert(rtp, (idx_dir + 1) or (#rtp + 1), after)
+    table.insert(rtp, idx_dir + 1, after)
   end
 
   vim.opt.rtp = rtp
