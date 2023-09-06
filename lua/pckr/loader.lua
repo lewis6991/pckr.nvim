@@ -186,15 +186,21 @@ local function ensurelist(x)
   return type(x) == 'table' and x or { x }
 end
 
+--- @return string[]
+local function get_rtp()
+  --- @diagnostic disable-next-line:undefined-field
+  return vim.opt.rtp:get()
+end
+
 local function do_loadplugins()
   -- Load plugins from the original rtp, excluding after
-  for _, path in ipairs(vim.opt.rtp:get()) do
+  for _, path in ipairs(get_rtp()) do
     if not path:find('after/?$') then
       source_runtime(path, "plugin")
     end
   end
 
-  for _, path in ipairs(vim.opt.rtp:get()) do
+  for _, path in ipairs(get_rtp()) do
     if path:find('after/?$') then
       source_runtime(path, "plugin")
     end

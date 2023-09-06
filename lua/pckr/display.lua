@@ -25,8 +25,8 @@ local TITLE = 'pckr.nvim'
 --- @field nameMark integer Extmark used track the location of the item in the buffer
 
 --- @class Pckr.Display.Callbacks
---- @field diff        fun(plugin: Pckr.Plugin, commit: string, callback: function)
---- @field revert_last fun(plugin: Pckr.Plugin)
+--- @field diff?        fun(plugin: Pckr.Plugin, commit: string, callback: function)
+--- @field revert_last? fun(plugin: Pckr.Plugin)
 
 --- @class Pckr.Display
 --- @field interactive boolean

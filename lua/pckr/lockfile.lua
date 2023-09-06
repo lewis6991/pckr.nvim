@@ -40,7 +40,7 @@ end
 --- @param path string
 --- @param info table<string,string>
 local function update(path, info)
-  local dir = vim.fs.dirname(path)
+  local dir = assert(vim.fs.dirname(path))
   if vim.fn.isdirectory(dir) == 0 then
     vim.fn.mkdir(dir, 'p')
   end

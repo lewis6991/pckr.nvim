@@ -138,8 +138,8 @@ local post_update_hook = a.sync(function(plugin, disp)
       local jobs = require('pckr.jobs')
       local jr = jobs.run(run_task, { cwd = plugin.install_path })
 
-      if jr.exit_code ~= 0 then
-        return { string.format('Error running post update hook: %s', table.concat(jr.stderr, '\n')) }
+      if jr.code ~= 0 then
+        return { string.format('Error running post update hook: %s', jr.stderr) }
       end
     end
   end

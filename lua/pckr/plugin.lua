@@ -84,7 +84,7 @@ end
 --- @param text string
 --- @return string, string
 local function get_plugin_name(text)
-  local path = vim.fn.expand(text)
+  local path = vim.fn.expand(text) --[[@as string]]
   local name_segments = vim.split(path, util.get_separator())
   local segment_idx = #name_segments
   local name = name_segments[segment_idx]
