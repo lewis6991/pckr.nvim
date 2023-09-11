@@ -9,8 +9,8 @@ local M = {}
 -- function that will run the task with the given opts via vim.loop.spawn
 --- @param task string|string[]
 --- @param opts SystemOpts
---- @param callback? fun(_: SystemCompleted)
---- @type fun(task: string|string[], opts: SystemOpts): SystemCompleted
+--- @param callback? fun(_: vim.SystemCompleted)
+--- @type fun(task: string|string[], opts: SystemOpts): vim.SystemCompleted
 M.run = a.wrap(function(task, opts, callback)
   if type(task) == 'string' then
     local shell = os.getenv('SHELL') or vim.o.shell
