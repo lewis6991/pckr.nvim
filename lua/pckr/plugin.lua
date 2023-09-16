@@ -173,6 +173,10 @@ function M.process_spec(spec0, required_by)
 
   local url, ptype = guess_plugin_type(path)
 
+  if ptype == 'local' then
+    install_path = path
+  end
+
   local plugin = {
     name = name,
     branch = spec.branch,

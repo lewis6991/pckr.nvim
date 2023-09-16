@@ -45,6 +45,7 @@ function M.add(spec)
   if config.autoinstall then
     for name, p in pairs(plugin.plugins) do
       if not p.installed then
+        print('AUTO ', name, p.install_path)
         to_install[#to_install + 1] = name
       end
     end

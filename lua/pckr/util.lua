@@ -46,7 +46,7 @@ end
 --- @param ... string
 --- @return string
 function util.join_paths(...)
-  return table.concat({ ... }, util.get_separator())
+  return (table.concat({ ... }, '/'):gsub('//+', '/'))
 end
 
 --- @param f function

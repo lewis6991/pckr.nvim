@@ -15,9 +15,6 @@ local M = {}
 
 --- @class Pckr.Result
 --- @field err? string[]
---- Used for moves
---- @field from string
---- @field to string
 
 --- @return Pckr.Display
 local function open_display()
@@ -196,37 +193,6 @@ local function get_install_tasks(missing_plugins, disp, installs)
 end
 
 --- @param plugin Pckr.Plugin
---- @param moves table<string,Pckr.Result>
---- @param fs_state Pckr.FSState
-local function move_plugin(plugin, moves, fs_state)
-  local from --- @type string
-  local to --- @type string
-  if not plugin.start then
-    from = util.join_paths(config.start_dir, plugin.name)
-    to = util.join_paths(config.opt_dir, plugin.name)
-  else
-    from = util.join_paths(config.opt_dir, plugin.name)
-    to = util.join_paths(config.start_dir, plugin.name)
-  end
-
-  fs_state.start[to] = plugin.name
-  fs_state.opt[from] = nil
-  fs_state.dirty[from] = nil
-
-  moves[plugin.name] = { from = from, to = to }
-
-  -- NOTE: If we stored all plugins somewhere off-package-path and used symlinks to put them in the
-  -- right directories, this could be lighter-weight
-  local success, msg = os.rename(from, to)
-  if not success then
-    log.fmt_error('Failed to move %s to %s: %s', from, to, msg)
-    moves[plugin.name] = { err = { msg } }
-  else
-    log.fmt_debug('Moved %s from %s to %s', plugin.name, from, to)
-  end
-end
-
---- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
 --- @param updates table<string,Pckr.Result>
 --- @return string?, string[]?
@@ -302,37 +268,15 @@ local function get_update_tasks(update_plugins, disp, updates)
   return tasks
 end
 
---- @param plugins table<string,Pckr.Plugin>
---- @param extra_plugins string[]
---- @param moves table<string,Pckr.Result>
---- @param fs_state Pckr.FSState
-local function fix_plugin_types(plugins, extra_plugins, moves, fs_state)
-  log.debug('Fixing plugin types')
-  -- NOTE: This function can only be run on plugins already installed
-  for _, v in ipairs(extra_plugins) do
-    local plugin = plugins[v]
-    local wrong_install_dir =
-      util.join_paths(plugin.start and config.opt_dir or config.start_dir, plugin.name)
-    if vim.loop.fs_stat(wrong_install_dir) then
-      move_plugin(plugin, moves, fs_state)
-    end
-  end
-  log.debug('Done fixing plugin types')
-end
-
 -- Find and remove any plugins not currently configured for use
 --- @param plugins table<string,Pckr.Plugin>
---- @param fs_state? Pckr.FSState
 --- @param removals? string[]
-local do_clean = a.sync(function(plugins, fs_state, removals)
-  fs_state = fs_state or fsstate.get_fs_state(plugins)
-
+local do_clean = a.sync(function(plugins, removals)
   log.debug('Starting clean')
-  --- @type table<string,string>
-  local plugins_to_remove = vim.tbl_extend('force', fs_state.extra, fs_state.dirty)
 
-  log.debug('extra plugins', fs_state.extra)
-  log.debug('dirty plugins', fs_state.dirty)
+  local plugins_to_remove = fsstate.find_extra_plugins(plugins)
+
+  log.debug('extra plugins', plugins_to_remove)
 
   if not next(plugins_to_remove) then
     log.info('Already clean!')
@@ -375,8 +319,8 @@ end, 4)
 --- @param __cb fun()
 M.install = a.sync(function(install_plugins, _opts, __cb)
   if not install_plugins then
-    local fs_state = fsstate.get_fs_state(pckr_plugins)
-    install_plugins = vim.tbl_values(fs_state.missing)
+    local missing = fsstate.find_missing_plugins(pckr_plugins)
+    install_plugins = vim.tbl_values(missing)
   end
 
   if #install_plugins == 0 then
@@ -411,8 +355,10 @@ M.update = a.void(function(update_plugins)
   if #update_plugins == 0 then
     update_plugins = vim.tbl_keys(pckr_plugins)
   end
-  local fs_state = fsstate.get_fs_state(pckr_plugins)
-  local _, installed_plugins = util.partition(vim.tbl_values(fs_state.missing), update_plugins)
+
+  local missing = fsstate.find_missing_plugins(pckr_plugins)
+
+  local _, installed_plugins = util.partition(vim.tbl_values(missing), update_plugins)
 
   local updates = {}
 
@@ -444,9 +390,6 @@ M.sync = a.void(function(update_plugins)
   if #update_plugins == 0 then
     update_plugins = vim.tbl_keys(pckr_plugins)
   end
-  local fs_state = fsstate.get_fs_state(pckr_plugins)
-
-  local extra_plugins = util.partition(vim.tbl_values(fs_state.extra), update_plugins)
 
   local results = {
     moves = {}, --- @type table<string,Pckr.Result>
@@ -455,16 +398,12 @@ M.sync = a.void(function(update_plugins)
     updates = {}, --- @type table<string,Pckr.Result>
   }
 
-  fix_plugin_types(pckr_plugins, extra_plugins, results.moves, fs_state)
+  do_clean(pckr_plugins, results.removals)
 
-  -- Even though we may have moved some dirty plugins, they may still be dirty
-  -- for a different reason so recalculate fs_state
-  fs_state = fsstate.get_fs_state(pckr_plugins)
-
-  do_clean(pckr_plugins, fs_state, results.removals)
+  local missing = fsstate.find_missing_plugins(pckr_plugins)
 
   local missing_plugins, installed_plugins =
-    util.partition(vim.tbl_values(fs_state.missing), update_plugins)
+    util.partition(vim.tbl_values(missing), update_plugins)
 
   a.main()
 

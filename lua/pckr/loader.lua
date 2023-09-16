@@ -54,17 +54,8 @@ _G.loadfile = function(path)
   end
 end
 
---- Concatenate directories and/or file paths into a single path with normalization
---- (e.g., `"foo/"` and `"bar"` get joined to `"foo/bar"`)
----
----@param ... string
----@return string
-local function joinpath(...)
-  return (table.concat({ ... }, '/'):gsub('//+', '/'))
-end
-
 local function source_runtime(...)
-  local dir = joinpath(...)
+  local dir = util.join_paths(...)
   ---@type string[], string[]
   local vim_files, lua_files = {}, {}
   util.walk(dir, function(path, name, t)
