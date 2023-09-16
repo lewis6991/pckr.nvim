@@ -26,10 +26,10 @@ local join_paths = util.join_paths
 --- @class Pckr.Config.Lockfile
 --- @field path string
 
---- @class (exact) Pckr.Config
+--- @class (exact) Pckr.UserConfig
 --- @field package_root? string
 --- @field pack_dir?     string
---- @field max_jobs?     integer?
+--- @field max_jobs?     integer
 --- @field start_dir?    string
 --- @field opt_dir?      string
 --- @field autoremove?   boolean
@@ -42,9 +42,27 @@ local join_paths = util.join_paths
 --- @field native_loadplugins? boolean Let pckr handle 'loadplugins'. Note: make
 ---                                   sure to populate rtp before calling pckr.
 
+--- @class (exact) Pckr.Config : Pckr.UserConfig
+--- @field package_root string
+--- @field pack_dir     string
+--- @field start_dir    string
+--- @field opt_dir      string
+--- @field autoremove   boolean
+--- @field autoinstall  boolean
+--- @field display      Pckr.Config.Display
+--- @field git          Pckr.Config.Git
+--- @field log          Pckr.Config.Log
+--- @field lockfile     Pckr.Config.Lockfile
+--- @field native_packadd     boolean
+--- @field native_loadplugins boolean Let pckr handle 'loadplugins'. Note: make
+---                                   sure to populate rtp before calling pckr.
+
 --- @type Pckr.Config
 local default_config = {
   package_root = join_paths(vim.fn.stdpath('data'), 'site', 'pack'),
+  pack_dir = '',
+  start_dir = '',
+  opt_dir = '',
   max_jobs = nil,
   git = {
     cmd = 'git',
@@ -100,9 +118,7 @@ local function set(_, user_config)
 end
 
 --- @type Pckr.Config
-local M = {}
-
-setmetatable(M, {
+local M = setmetatable({}, {
   __index = function(_, k)
     return (config)[k]
   end,

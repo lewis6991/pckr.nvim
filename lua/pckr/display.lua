@@ -17,12 +17,12 @@ local TITLE = 'pckr.nvim'
 --- | 'done'
 
 --- @class Pckr.Display.Item
---- @field status Pckr.Display.Status
---- @field message string
---- @field info string[]? Additional info that can be collapsed
+--- @field status? Pckr.Display.Status
+--- @field message? string
+--- @field info? string[]? Additional info that can be collapsed
 --- @field expanded boolean Whether info is being displayed
---- @field mark integer Extmark used track the location of the item in the buffer
---- @field nameMark integer Extmark used track the location of the item in the buffer
+--- @field mark? integer Extmark used track the location of the item in the buffer
+--- @field nameMark? integer Extmark used track the location of the item in the buffer
 
 --- @class Pckr.Display.Callbacks
 --- @field diff?        fun(plugin: Pckr.Plugin, commit: string, callback: function)
@@ -464,6 +464,7 @@ display.interactive = not config.display.non_interactive and not in_headless
 local keymaps = {
   quit = {
     action = 'quit',
+    lhs = 'q',
     rhs = function()
       -- Close a display window and signal that any running operations should terminate
       display.running = false
@@ -473,6 +474,7 @@ local keymaps = {
 
   diff = {
     action = 'show the diff',
+    lhs = 'd',
     rhs = function()
       diff(display)
     end,
@@ -480,6 +482,7 @@ local keymaps = {
 
   toggle_info = {
     action = 'show more info',
+    lhs = { 'za', '<CR>' },
     rhs = function()
       toggle_info(display)
     end,
@@ -487,6 +490,7 @@ local keymaps = {
 
   prompt_revert = {
     action = 'revert an update',
+    lhs = 'r',
     rhs = function()
       prompt_revert(display)
     end,
