@@ -89,7 +89,7 @@ require('pckr').add{
   -- Load on specific keymap
   {'tpope/vim-commentary', cond = keys('n', 'gc') },
 
-  -- Load on a combination of conditions: specific filetypes or commands
+  -- Load on specific commands
   -- Also run code after load (see the "config" key)
   { 'w0rp/ale',
     cond = cmd('ALEEnable'),
