@@ -61,22 +61,42 @@ local function get_plugin(disp)
 end
 
 --- @param inner? boolean
---- @return integer, integer
-local function open_win(inner)
+--- @return vim.api.keyset.float_config
+local function get_win_config(inner)
   local vpad = inner and 8 or 6
   local hpad = inner and 14 or 10
   local width = math.min(vim.o.columns - hpad * 2, 200)
   local height = math.min(vim.o.lines - vpad * 2, 70)
-  local buf = api.nvim_create_buf(false, true)
-  local win = api.nvim_open_win(buf, true, {
+  return {
     relative = 'editor',
     style = 'minimal',
     width = width,
     border = inner and 'rounded' or nil,
     height = height,
-    noautocmd = true,
     row = (vim.o.lines - height) / 2,
     col = (vim.o.columns - width) / 2,
+  }
+end
+
+local augroup = api.nvim_create_augroup('pckr.display', {})
+
+--- @param inner? boolean
+--- @return integer, integer
+local function open_win(inner)
+  local buf = api.nvim_create_buf(false, true)
+  local win_cfg = get_win_config(inner)
+  win_cfg.noautocmd = true
+  local win = api.nvim_open_win(buf, true, get_win_config(inner))
+
+  api.nvim_create_autocmd('VimResized', {
+    desc = 'Resize pckr display when Nvim is resized',
+    group = augroup,
+    callback = function()
+      if not vim.api.nvim_win_is_valid(win) then
+        return true
+      end
+      api.nvim_win_set_config(win, get_win_config(inner))
+    end
   })
 
   if inner then
