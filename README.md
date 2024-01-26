@@ -79,10 +79,10 @@ require('pckr').add{
   '9mm/vim-closer';
 
   -- Lazy loading:
-  -- Load on specific commands
+  -- Load on a specific command
   {'tpope/vim-dispatch',
     cond = {
-      cmd {'Dispatch', 'Make', 'Focus', 'Start'}
+      cmd('Dispatch'),
     }
   };
 
