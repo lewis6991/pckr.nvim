@@ -1,6 +1,4 @@
-local a = require('pckr.async')
 local util = require('pckr.util')
-local log = require('pckr.log')
 local config = require('pckr.config')
 
 local uv = vim.loop
@@ -31,33 +29,26 @@ local function path_is_plugin(path, is_start, plugins)
   return false
 end
 
---- Return plugins installed in config.opt_dir and config.start_dir
---- @return table<string,string> opt_plugins
---- @return table<string,string> start_plugins
-local get_installed_plugins = a.sync(function()
-  log.debug('Updating FS state')
+--- Get installed plugins in `dir`.
+--- @param dir string Directory to search
+--- @return table<string,string> plugins
+local function get_installed_plugins(dir)
+  local plugins = {} --- @type table<string,string>
 
-  local opt_plugins = {} --- @type table<string,string>
-  local start_plugins = {} --- @type table<string,string>
-
-  for dir, tbl in pairs({
-    [config.opt_dir] = opt_plugins,
-    [config.start_dir] = start_plugins,
-  }) do
-    for name, ty in vim.fs.dir(dir) do
-      if ty ~= 'file' then
-        tbl[util.join_paths(dir, name)] = name
-      end
+  for name, ty in vim.fs.dir(dir) do
+    if ty ~= 'file' then
+      plugins[util.join_paths(dir, name)] = name
     end
   end
 
-  return opt_plugins, start_plugins
-end, 1)
+  return plugins
+end
 
 --- @param plugins table<string,Pckr.Plugin>
 --- @return table<string,string>
 function M.find_extra_plugins(plugins)
-  local opt_plugins, start_plugins = get_installed_plugins()
+  local opt_plugins = get_installed_plugins(config.opt_dir)
+  local start_plugins = get_installed_plugins(config.start_dir)
 
   local extra = {} --- @type table<string,string>
 
@@ -91,7 +82,8 @@ end
 --- @param plugins table<string,Pckr.Plugin>
 --- @return table<string,string>
 function M.find_missing_plugins(plugins)
-  local opt_plugins, start_plugins = get_installed_plugins()
+  local opt_plugins = get_installed_plugins(config.opt_dir)
+  local start_plugins = get_installed_plugins(config.start_dir)
 
   local missing_plugins = {} --- @type table<string,string>
 
