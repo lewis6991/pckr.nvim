@@ -63,7 +63,7 @@ Then you can write your plugin specification in Lua, e.g. (in `~/.config/nvim/lu
     -- Lazy loading:
     -- Load on specific commands
     {'tpope/vim-dispatch',
-      cond = { cmd {'Dispatch', 'Make', 'Focus', 'Start'} }
+      cond = { cmd('Dispatch') }
     };
 
     -- Load on specific keymap
