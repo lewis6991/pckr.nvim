@@ -128,7 +128,7 @@ Clean, then update and install plugins.
 Supports the `--preview` flag as an optional first argument to preview
 updates.
 
-`Pckr lock`                                            *pckr-commands-sync*
+`Pckr lock`                                            *pckr-commands-lock*
 TODO
 
 `Pckr restore`                                      *pckr-commands-restore*
