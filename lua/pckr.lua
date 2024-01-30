@@ -7,7 +7,7 @@ local loader = require('pckr.loader')
 
 local did_setup = false
 
---- @param user_config? Pckr.Config
+--- @param user_config? Pckr.UserConfig
 local function setup(user_config)
   log.debug('setup')
   config(user_config)
@@ -31,7 +31,7 @@ end
 
 local M = {}
 
---- @param spec Pckr.UserSpec
+--- @param spec string|Pckr.UserSpec|(string|Pckr.UserSpec)[]
 function M.add(spec)
   if not did_setup then
     setup()
@@ -62,7 +62,7 @@ function M.add(spec)
 end
 
 -- This should be safe to call multiple times.
---- @param user_config Pckr.Config
+--- @param user_config Pckr.UserConfig
 --- @param user_spec? Pckr.UserSpec
 function M.setup(user_config, user_spec)
   setup(user_config)

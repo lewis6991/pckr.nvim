@@ -3,22 +3,22 @@ local util = require('pckr.util')
 local join_paths = util.join_paths
 
 --- @class Pckr.Config.Display
---- @field non_interactive boolean
---- @field prompt_border   string
---- @field working_sym     string
---- @field error_sym       string
---- @field done_sym        string
---- @field removed_sym     string
---- @field moved_sym       string
---- @field item_sym        string
---- @field header_sym      string
---- @field keybindings     table<string,(string|string[])>
+--- @field non_interactive? boolean
+--- @field prompt_border?   string
+--- @field working_sym?     string
+--- @field error_sym?       string
+--- @field done_sym?        string
+--- @field removed_sym?     string
+--- @field moved_sym?       string
+--- @field item_sym?        string
+--- @field header_sym?      string
+--- @field keybindings?     table<string,(string|string[])>
 
 --- @class Pckr.Config.Git
---- @field cmd                string
---- @field depth              integer
---- @field clone_timeout      integer
---- @field default_url_format string
+--- @field cmd?                string
+--- @field depth?              integer
+--- @field clone_timeout?      integer
+--- @field default_url_format? string
 
 --- @class Pckr.Config.Log
 --- @field level Pckr.LogLevel
@@ -100,7 +100,7 @@ local default_config = {
 local config = vim.deepcopy(default_config)
 
 --- @param _ table
---- @param user_config Pckr.Config
+--- @param user_config Pckr.UserConfig
 --- @return Pckr.Config
 local function set(_, user_config)
   config = vim.tbl_deep_extend('force', config, user_config or {})
