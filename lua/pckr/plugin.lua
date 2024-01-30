@@ -4,10 +4,10 @@ local config = require('pckr.config')
 
 --- @alias Pckr.PluginLoader fun(function)
 
---- @class Pckr.UserSpec
---- @field [integer] string
+--- @class (exact) Pckr.UserSpec
+--- @field [1]         string
 --- @field branch?     string
---- @field rev         string
+--- @field rev?        string
 --- @field tag?        string
 --- @field commit?     string
 --- @field start?      boolean
@@ -16,9 +16,9 @@ local config = require('pckr.config')
 --- @field config_pre? fun()|string
 --- @field config?     fun()|string
 --- @field lock?       boolean
---- @field requires?   string|(string|Pckr.UserSpec)[]
+--- @field requires?   string|Pckr.UserSpec|(string|Pckr.UserSpec)[]
 
---- @class Pckr.Plugin
+--- @class (exact) Pckr.Plugin
 --- @field branch?      string
 --- @field rev?         string
 --- @field tag?         string
@@ -101,11 +101,48 @@ local function remove_ending_git_url(url)
   return vim.endswith(url, '.git') and url:sub(1, -5) or url
 end
 
---- @param x string | Pckr.UserSpec
+--- @param x string|Pckr.UserSpec
+--- @return boolean
+local function is_simple(x)
+  if type(x) == 'string' then
+    return true
+  end
+
+  for k in pairs(x --[[@as table<any,any>]]) do
+    if type(k) ~= 'number' then
+      return false
+    end
+  end
+
+  return true
+end
+
+--- @param x string|Pckr.UserSpec
 --- @return Pckr.UserSpec
 local function normspec(x)
-  --- @diagnostic disable-next-line:return-type-mismatch
-  return type(x) == 'string' and { x } or x
+  if type(x) == 'string' then
+    return { x }
+  end
+  return x
+end
+
+--- @param x string|Pckr.UserSpec|(string|Pckr.UserSpec)[]
+--- @return boolean
+local function spec_is_list(x)
+  if type(x) == 'string' then
+    return false
+  end
+
+  if #x > 1 then
+    return true
+  end
+
+  if #x == 1 and type(x[1]) == 'string' and is_simple(x) then
+    -- type(x) == Pckr.UserSpec
+    return false
+  end
+
+  return true
 end
 
 --- @param x string | fun()
@@ -119,57 +156,45 @@ local function normconfig(x)
   return x
 end
 
---- The main logic for adding a plugin (and any dependencies) to the managed set
--- Can be invoked with (1) a single plugin spec as a string, (2) a single plugin spec table, or (3)
--- a list of plugin specs
 --- @param spec0 string|Pckr.UserSpec
 --- @param required_by? Pckr.Plugin
---- @return table<string,Pckr.Plugin>
-function M.process_spec(spec0, required_by)
+--- @return string?, Pckr.Plugin?
+local function process_spec_item(spec0, required_by)
   local spec = normspec(spec0)
-
-  if #spec > 1 then
-    local r = {}
-    for _, s in ipairs(spec) do
-      r = vim.tbl_extend('error', r, M.process_spec(s, required_by))
-    end
-    return r
-  end
-
   local id = spec[1]
-  spec[1] = nil
 
-  if id == nil then
+  if not id then
     log.warn('No plugin name provided!')
     log.debug('No plugin name provided for spec', spec)
-    return {}
+    return
   end
 
   local name, path = get_plugin_name(id)
 
   if name == '' then
     log.fmt_warn('"%s" is an invalid plugin name!', id)
-    return {}
+    return
   end
 
   local existing = M.plugins[name]
-  local simple = type(spec0) == 'string'
+  local simple = is_simple(spec0)
 
   if existing then
     if simple then
       log.debug('Ignoring simple plugin spec' .. name)
-      return { [name] = existing }
+      return name, existing
     else
       if not existing.simple then
         log.fmt_warn('Plugin "%s" is specified more than once!', name)
-        return { [name] = existing }
+        return name, existing
       end
     end
 
     log.debug('Overriding simple plugin spec: ' .. name)
   end
 
-  local install_path = util.join_paths(spec.start and config.start_dir or config.opt_dir, name)
+  local install_path_dir = spec.start and config.start_dir or config.opt_dir
+  local install_path = util.join_paths(install_path_dir, name)
 
   local url, ptype = guess_plugin_type(path)
 
@@ -177,6 +202,7 @@ function M.process_spec(spec0, required_by)
     install_path = path
   end
 
+  --- @type Pckr.Plugin
   local plugin = {
     name = name,
     branch = spec.branch,
@@ -195,12 +221,8 @@ function M.process_spec(spec0, required_by)
     config_pre = normconfig(spec.config_pre),
     config = normconfig(spec.config),
     revs = {},
+    required_by = required_by and { required_by.name } or nil,
   }
-
-  if required_by then
-    plugin.required_by = plugin.required_by or {}
-    table.insert(plugin.required_by, required_by.name)
-  end
 
   if existing and existing.required_by then
     plugin.required_by = plugin.required_by or {}
@@ -209,17 +231,39 @@ function M.process_spec(spec0, required_by)
 
   M.plugins[name] = plugin
 
-  if spec.requires then
-    local sr = spec.requires
-    local r = type(sr) == 'string' and { sr } or sr --[[@as string[] ]]
+  local spec_requires = spec.requires
+  if spec_requires then
+    local deps = M.process_spec(spec_requires, plugin)
+    plugin.requires = vim.tbl_keys(deps)
+  end
 
-    plugin.requires = {}
-    for _, s in ipairs(r) do
-      vim.list_extend(plugin.requires, vim.tbl_keys(M.process_spec(s, plugin)))
+  return name, plugin
+end
+
+--- The main logic for adding a plugin (and any dependencies) to the managed set
+--- @param spec string|Pckr.UserSpec|(string|Pckr.UserSpec)[]
+--- @param required_by? Pckr.Plugin
+--- @return table<string,Pckr.Plugin>
+function M.process_spec(spec, required_by)
+  local ret = {} --- @type table<string,Pckr.Plugin>
+
+  if spec_is_list(spec) then
+    --- @cast spec (string|Pckr.UserSpec)[]
+    for _, x in ipairs(spec) do
+      local name, plugin = process_spec_item(x, required_by)
+      if name then
+        ret[name] = plugin
+      end
+    end
+  else
+    --- @cast spec string|Pckr.UserSpec
+    local name, plugin = process_spec_item(spec, required_by)
+    if name then
+      ret[name] = plugin
     end
   end
 
-  return { [name] = plugin }
+  return ret
 end
 
 return M
