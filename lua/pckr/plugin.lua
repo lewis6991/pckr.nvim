@@ -126,16 +126,24 @@ end
 --- @param required_by? Pckr.Plugin
 --- @return table<string,Pckr.Plugin>
 function M.process_spec(spec0, required_by)
-  local spec = normspec(spec0)
-
-  if #spec > 1 then
-    local r = {}
-    for _, s in ipairs(spec) do
-      r = vim.tbl_extend('error', r, M.process_spec(s, required_by))
+  if type(spec0) == 'table' then
+    if #spec0 > 1 then
+      -- table of multiple specs
+      -- process each one
+      local r = {}
+      for _, s in ipairs(spec0) do
+        r = vim.tbl_extend('error', r, M.process_spec(s, required_by))
+      end
+      return r
     end
-    return r
+    if type(spec0[1]) == 'table' then
+      -- table containing a single Pckr.UserSpec
+      -- extract it
+      spec0 = spec0[1]
+    end
   end
 
+  local spec = normspec(spec0)
   local id = spec[1]
   spec[1] = nil
 
