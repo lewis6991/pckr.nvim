@@ -1,33 +1,48 @@
----
 name: CI
+
 on:
-  pull_request: ~
   push:
-    branches:
-      - master
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    name: Run tests
+  commit_lint:
     runs-on: ubuntu-latest
+    steps:
+      # Check commit messages
+      - uses: webiny/action-conventional-commits@v1.1.0
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     strategy:
-      fail-fast: true
       matrix:
-        neovim_branch: ["v0.8.1", "nightly"]
+        neovim_branch:
+          - 'v0.9.5'
+          - 'nightly'
+
+    env:
+      NVIM_TEST_VERSION: ${{ matrix.neovim_branch }}
 
     steps:
-      # Checkout packer
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      # Prepare taken from telescope
-      - name: Prepare
-        run: |
-          mkdir -p _neovim
-          curl -sL https://github.com/neovim/neovim/releases/download/${{ matrix.neovim_branch }}/nvim-linux64.tar.gz | tar xzf - --strip-components=1 -C "${PWD}/_neovim"
+      - uses: leafo/gh-actions-lua@v9
+        with:
+          luaVersion: "5.1.5"
 
-      - name: Run tests
-        run: |
-          export PATH="${PWD}/_neovim/bin:${PATH}"
-          export VIM="${PWD}/_neovim/share/nvim/runtime"
-          nvim --version
-          make test
+      - uses: leafo/gh-actions-luarocks@v4
+
+      - name: Download nvim-test
+        run: make nvim-test
+
+      - name: Run Test
+        run: make test
