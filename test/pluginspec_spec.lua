@@ -7,7 +7,7 @@ describe('plugin spec formats', function()
     helpers.clear()
 
     -- Make pckr available
-    exec_lua('package.path = ...', package.path)
+    exec_lua[[vim.opt.rtp:append('.')]]
   end)
 
   it('can process a simple string spec', function()
