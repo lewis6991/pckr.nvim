@@ -14,7 +14,7 @@
     "diagnostics": {
       "groupFileStatus": {
         "ambiguity": "Opened",
-        "await": "Opened",
+        "await": "None",
         "codestyle": "None",
         "duplicate": "Opened",
         "global": "Opened",

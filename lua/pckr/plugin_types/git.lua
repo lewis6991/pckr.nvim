@@ -25,7 +25,7 @@ do
     GIT_COMMON_DIR = true,
   }
 
-  for k, v in pairs(vim.fn.environ()) do
+  for k, v in pairs(vim.fn.environ() --[[@as table<string,string>]]) do
     if not blocked_env_vars[k] then
       job_env[#job_env + 1] = k .. '=' .. v
     end
@@ -58,12 +58,12 @@ local function is_breaking(x)
       ~= nil
 end
 
----@param commit_bodies string[]
+---@param commit_bodies string
 ---@return string[]
 local function get_breaking_commits(commit_bodies)
   local ret = {} --- @type string[]
   local commits =
-    vim.gsplit(table.concat(commit_bodies, '\n'), '===COMMIT_START===', { plain = true })
+    vim.gsplit(commit_bodies, '===COMMIT_START===', { plain = true })
 
   for commit in commits do
     local commit_parts = vim.split(commit, '===BODY_START===')
@@ -76,24 +76,18 @@ local function get_breaking_commits(commit_bodies)
   return ret
 end
 
---- @param x string
---- @return string[]
-local function split(x)
-  return vim.split(x, '\n', {plain=true})
-end
-
 --- @param args string[]
---- @param opts? SystemOpts
---- @return boolean, string[]
+--- @param opts? vim.SystemOpts
+--- @return boolean, string
 local function git_run(args, opts)
   opts = opts or {}
   opts.env = opts.env or job_env
   local obj = jobs.run({ config.git.cmd, unpack(args) }, opts)
   local ok = obj.code == 0 and obj.signal == 0
   if ok then
-    return true, split(obj.stdout)
+    return true, obj.stdout
   end
-  return false, split(obj.stderr)
+  return false, obj.stderr
 end
 
 --- @type {[1]: integer, [2]: integer, [3]: integer}
@@ -124,7 +118,7 @@ local function set_version()
 
   local vok, out = git_run({ '--version' })
   if vok then
-    local line = out[1]
+    local line = out
     local ok, err = pcall(function()
       assert(vim.startswith(line, 'git version'), 'Unexpected output: ' .. line)
       local parts = vim.split(line, '%s+')
@@ -263,7 +257,7 @@ local function process_progress(x)
 end
 
 ---@param plugin Pckr.Plugin
----@return string?, string[]?
+---@return string?, string?
 local function resolve_tag(plugin)
   local tag = plugin.tag
   local ok, out = git_run({
@@ -300,7 +294,7 @@ end
 
 --- @param plugin Pckr.Plugin
 --- @param update_task? fun(msg: string, info?: string[])
---- @return boolean, string[]
+--- @return boolean, string
 local function checkout(plugin, update_task)
   update_task = update_task or function() end
 
@@ -330,7 +324,7 @@ local function checkout(plugin, update_task)
     vim.list_extend(checkout_args, { '-B', branch })
     target = resolve_branch(plugin.install_path, branch)
     if not target then
-      return false, { 'Could not find commit for branch ' .. branch }
+      return false, 'Could not find commit for branch ' .. branch
     end
   end
 
@@ -348,7 +342,7 @@ end
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @return boolean, string[]
+--- @return boolean, string
 local function mark_breaking_changes(plugin, disp)
   disp:task_update(plugin.name, 'checking for breaking changes...')
   local ok, out = git_run({
@@ -369,7 +363,7 @@ end
 --- @param plugin Pckr.Plugin
 --- @param update_task fun(msg: string, info?: string[])
 --- @param timeout integer Timeout in ms
---- @return boolean, string[]
+--- @return boolean, string
 local function clone(plugin, update_task, timeout)
   update_task('cloning...')
 
@@ -400,7 +394,9 @@ end
 --- @param path string
 local function sanitize_path(path)
   assert(path)
+  --- @diagnostic disable-next-line
   local lerr, stat = a.wrap(uv.fs_lstat, 2)(path)
+  --- @diagnostic disable-next-line
   if lerr or stat.type ~= 'link' then
     -- path doesn't exist or isn't a link
     return
@@ -419,7 +415,7 @@ end
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @return boolean?, string[]
+--- @return boolean?, string
 local function install(plugin, disp)
   --- @param msg string
   --- @param info? string[]
@@ -444,7 +440,7 @@ end
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @return string[]?
+--- @return string?
 M.installer = async(function(plugin, disp)
   local ok, out = install(plugin, disp)
 
@@ -468,7 +464,7 @@ end
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @return boolean, string[]?
+--- @return boolean, string?
 local function update(plugin, disp)
   disp:task_update(plugin.name, 'checking current commit...')
 
@@ -537,13 +533,15 @@ end
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @return string[]?
+--- @return string?
 M.updater = async(function(plugin, disp)
   local ok, out = update(plugin, disp)
-  if not ok then
-    plugin.err = out
-    return plugin.err
+  if ok then
+    plugin.messages = out
+    return
   end
+  plugin.err = out
+  return out
 end, 2)
 
 --- @param plugin Pckr.Plugin
@@ -560,7 +558,7 @@ end, 1)
 
 --- @param plugin Pckr.Plugin
 --- @param commit string
---- @param callback fun(_: string[]?, _: string[]?)
+--- @param callback fun(_: string?, _: string?)
 M.diff = async(function(plugin, commit, callback)
   local ok, out = git_run({
     'show',
@@ -579,7 +577,7 @@ M.diff = async(function(plugin, commit, callback)
 end, 3)
 
 --- @param plugin Pckr.Plugin
---- @return string[]?
+--- @return string?
 M.revert_last = async(function(plugin)
   local ok, out = git_run({ 'reset', '--hard', 'HEAD@{1}' }, {
     cwd = plugin.install_path,
@@ -602,7 +600,7 @@ end, 1)
 --- Reset the plugin to `commit`
 --- @param plugin Pckr.Plugin
 --- @param commit string
---- @return string[]?
+--- @return string?
 M.revert_to = async(function(plugin, commit)
   assert(type(commit) == 'string', fmt("commit: string expected but '%s' provided", type(commit)))
   log.fmt_debug("Reverting '%s' to commit '%s'", plugin.name, commit)

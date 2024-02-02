@@ -1,11 +1,28 @@
 local co = coroutine
 
----Executes a future with a callback when it is done
+local function validate_callback(func, callback)
+  if callback and type(callback) ~= 'function' then
+    local info = debug.getinfo(func, 'nS')
+    error(string.format(
+      'Callback is not a function for %s, got: %s',
+      info.short_src .. ':' .. info.linedefined,
+      vim.inspect(callback)
+    ))
+  end
+end
+
+--- Executes a future with a callback when it is done
+--- @param func function
+--- @param callback function?
+--- @param ... any
 local function execute(func, callback, ...)
+  validate_callback(func, callback)
+
   local thread = co.create(func)
 
   local function step(...)
     local ret = { co.resume(thread, ...) }
+    --- @type boolean, integer, function
     local stat, nargs, fn_or_ret = unpack(ret)
 
     if not stat then
@@ -20,7 +37,7 @@ local function execute(func, callback, ...)
 
     if co.status(thread) == 'dead' then
       if callback then
-        callback(unpack(ret, 3))
+        callback(unpack(ret, 2))
       end
       return
     end
@@ -80,6 +97,12 @@ function M.void(func)
   end
 end
 
+
+--- @generic R
+--- @param n integer Mx number of jobs to run concurrently
+--- @param interrupt_check fun()?
+--- @param thunks (fun(cb: function): R)[]
+--- @return {[1]: R}[]
 function M.join(n, interrupt_check, thunks)
   return co.yield(1, function(finish)
     if #thunks == 0 then
@@ -89,7 +112,7 @@ function M.join(n, interrupt_check, thunks)
     local remaining = { select(n + 1, unpack(thunks)) }
     local to_go = #thunks
 
-    local ret = {}
+    local ret = {} --- @type any[][]
 
     local function cb(...)
       ret[#ret + 1] = { ... }
@@ -111,16 +134,19 @@ function M.join(n, interrupt_check, thunks)
 end
 
 ---Useful for partially applying arguments to an async function
+--- @param fn function
+--- @param ... any
 --- @return function
 function M.curry(fn, ...)
-  local args = { ... }
-  local nargs = select('#', ...)
+  --- @type integer, any[]
+  local nargs, args = select('#', ...), { ... }
+
   return function(...)
     local other = { ... }
     for i = 1, select('#', ...) do
       args[nargs + i] = other[i]
     end
-    fn(unpack(args))
+    return fn(unpack(args))
   end
 end
 

@@ -116,17 +116,39 @@ local function open_win(inner)
   return buf, win
 end
 
+--- @param x string|string[]?
+--- @return string[]?
+local function normalize_lines(x)
+  if type(x) == 'string' then
+    x = { x }
+  end
+
+  if not x then
+    return
+  end
+
+  local r = {} --- @type string[]
+  for _, l in ipairs(x) do
+    for _, i in ipairs(vim.split(l, '\n\r?')) do
+      r[#r + 1] = i
+    end
+  end
+
+  return r
+end
+
 --- Update the text of the display buffer
 --- @param buf? integer
 --- @param srow integer
 --- @param erow integer
---- @param lines string[]
-local function set_lines(buf, srow, erow, lines)
+--- @param text string|string[]
+local function set_lines(buf, srow, erow, text)
   if not buf then
     return
   end
+  text = assert(normalize_lines(text))
   vim.bo[buf].modifiable = true
-  api.nvim_buf_set_lines(buf, srow, erow, true, lines)
+  api.nvim_buf_set_lines(buf, srow, erow, true, text)
   vim.bo[buf].modifiable = false
 end
 
@@ -170,18 +192,18 @@ local function diff(disp)
     return
   end
 
-  disp.callbacks.diff(plugin, commit, function(lines, err)
+  disp.callbacks.diff(plugin, commit, function(text, err)
     if err then
       log.warn('Unable to get diff!')
       return
     end
     vim.schedule(function()
-      if not lines or #lines < 1 then
+      if not text then
         log.warn('No diff available')
         return
       end
       local buf = open_win(true)
-      set_lines(buf, 0, -1, lines)
+      set_lines(buf, 0, -1, text)
       api.nvim_buf_set_name(buf, commit)
       vim.keymap.set('n', 'q', '<cmd>close!<cr>', { buffer = buf, silent = true, nowait = true })
       vim.bo[buf].filetype = 'git'
@@ -211,6 +233,7 @@ local function get_task_region(self, plugin)
   -- TODO(lewis6991): sometimes the end_row will be lower than start_row. Could
   -- be an extmark bug?
   if srow > erow then
+    --- @type integer, integer
     srow, erow = erow, srow
   end
 
@@ -554,29 +577,14 @@ local function decrement_headline_count(disp)
       headline:sub(count_end + 1)
     )
 
-    set_lines(disp.buf, 0, HEADER_LINES - 1, { updated_headline })
+    set_lines(disp.buf, 0, HEADER_LINES - 1, updated_headline)
   end
-end
-
---- @param x string[]?
---- @return string[]?
-local function normalize_lines(x)
-  if not x then
-    return
-  end
-  local r = {} --- @type string[]
-  for _, l in ipairs(x) do
-    for _, i in ipairs(vim.split(l, '\n\r?')) do
-      r[#r + 1] = i
-    end
-  end
-  return r
 end
 
 --- @param self Pckr.Display
 --- @param plugin string
 --- @param message string
---- @param info? string[]
+--- @param info? string|string[]
 --- @param success? boolean
 local task_done = vim.schedule_wrap(function(self, plugin, message, info, success)
   if not self.buf then
@@ -620,7 +628,7 @@ end
 --- Update a task as having passively completed
 --- @param plugin string
 --- @param message string
---- @param info? string[]
+--- @param info? string|string[]
 function Display:task_done(plugin, message, info)
   task_done(self, plugin, message, info, nil)
 end
@@ -628,7 +636,7 @@ end
 --- Update a task as having successfully completed
 --- @param plugin string
 --- @param message string
---- @param info? string[]
+--- @param info? string|string[]
 function Display:task_succeeded(plugin, message, info)
   task_done(self, plugin, message, info, true)
 end
@@ -636,7 +644,7 @@ end
 --- Update a task as having unsuccessfully failed
 --- @param plugin string
 --- @param message string
---- @param info? string[]
+--- @param info? string|string[]
 function Display:task_failed(plugin, message, info)
   task_done(self, plugin, message, info, false)
 end
@@ -674,7 +682,7 @@ Display.update_headline_message = vim.schedule_wrap(function(self, message)
   local headline = TITLE .. ' - ' .. message
   local width = api.nvim_win_get_width(self.win) - 2
   local pad_width = math.max(math.floor((width - string.len(headline)) / 2.0), 0)
-  set_lines(self.buf, 0, HEADER_LINES - 1, { string.rep(' ', pad_width) .. headline })
+  set_lines(self.buf, 0, HEADER_LINES - 1, string.rep(' ', pad_width) .. headline)
 end)
 
 --- Display the final results of an operation

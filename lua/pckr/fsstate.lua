@@ -52,9 +52,9 @@ function M.find_extra_plugins(plugins)
 
   local extra = {} --- @type table<string,string>
 
-  for dplugins, is_start in pairs({
-    [opt_plugins] = false,
-    [start_plugins] = true,
+  for is_start, dplugins in pairs({
+    [false] = opt_plugins,
+    [true] = start_plugins
   }) do
     for path, name in pairs(dplugins) do
       if not path_is_plugin(path, is_start, plugins) then
@@ -80,16 +80,16 @@ local function plugin_installed(plugin, opt_plugins, start_plugins)
 end
 
 --- @param plugins table<string,Pckr.Plugin>
---- @return table<string,string>
+--- @return string[]
 function M.find_missing_plugins(plugins)
   local opt_plugins = get_installed_plugins(config.opt_dir)
   local start_plugins = get_installed_plugins(config.start_dir)
 
-  local missing_plugins = {} --- @type table<string,string>
+  local missing_plugins = {} --- @type string[]
 
   for plugin_name, plugin in pairs(plugins) do
     if not plugin_installed(plugin, opt_plugins, start_plugins) then
-      missing_plugins[plugin.install_path] = plugin_name
+      missing_plugins[#missing_plugins+1] = plugin_name
     end
   end
 

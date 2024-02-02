@@ -14,7 +14,7 @@ local pckr_plugins = require('pckr.plugin').plugins
 local M = {}
 
 --- @class Pckr.Result
---- @field err? string[]
+--- @field err? string
 
 --- @return Pckr.Display
 local function open_display()
@@ -30,13 +30,14 @@ local function open_display()
   })
 end
 
---- @param tasks (fun(function))[]
---- @param disp Pckr.Display
+--- @param tasks (fun(): string, Pckr.Result?)[]
+--- @param disp Pckr.Display?
 --- @param kind string
+--- @return table<string,Pckr.Result>
 local function run_tasks(tasks, disp, kind)
   if #tasks == 0 then
     log.info('Nothing to do!')
-    return
+    return {}
   end
 
   local function check()
@@ -52,7 +53,37 @@ local function run_tasks(tasks, disp, kind)
     disp:update_headline_message(string.format('%s %d / %d plugins', kind, #tasks, #tasks))
   end
 
-  a.join(limit, check, tasks)
+  --- @type {[1]: string?, [2]: string?}[]
+  local results = a.join(limit, check, tasks)
+
+  local results1 = {} --- @type table<string,Pckr.Result>
+  for _, r in ipairs(results) do
+    local name = r[1]
+    if name then
+      results1[name] = { err = r[2] }
+    end
+  end
+
+  return results1
+end
+
+--- @param task Pckr.Task
+--- @param plugins string[]
+--- @param disp? Pckr.Display
+--- @param kind string
+--- @return table<string, Pckr.Result>
+local function map_task(task, plugins, disp, kind)
+  local tasks = {} --- @type (fun(function))[]
+  for _, v in ipairs(plugins) do
+    local plugin = pckr_plugins[v]
+    if not plugin then
+      log.fmt_error('Unknown plugin: %s', v)
+    else
+      tasks[#tasks + 1] = a.curry(task, plugin, disp)
+    end
+  end
+
+  return run_tasks(tasks, disp, kind)
 end
 
 --- @param dir string
@@ -104,7 +135,7 @@ end
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @return string[]?
+--- @return string?
 local post_update_hook = a.sync(function(plugin, disp)
   if plugin.run or plugin.start then
     a.main()
@@ -122,33 +153,37 @@ local post_update_hook = a.sync(function(plugin, disp)
 
   if type(run_task) == 'function' then
     disp:task_update(plugin.name, 'running post update hook...')
+    --- @type boolean, string?
     local ok, err = pcall(run_task, plugin, disp)
     if not ok then
-      return { 'Error running post update hook: ' .. vim.inspect(err) }
+      return 'Error running post update hook: ' .. err
     end
   elseif type(run_task) == 'string' then
     disp:task_update(plugin.name, string.format('running post update hook...("%s")', run_task))
     if vim.startswith(run_task, ':') then
       -- Run a vim command
-      vim.cmd(run_task:sub(2))
+      --- @type boolean, string?
+      local ok, err = pcall(vim.cmd --[[@as function]], run_task:sub(2))
+      if not ok then
+        return 'Error running post update hook: ' .. err
+      end
     else
       local jobs = require('pckr.jobs')
       local jr = jobs.run(run_task, { cwd = plugin.install_path })
 
       if jr.code ~= 0 then
-        return { string.format('Error running post update hook: %s', jr.stderr) }
+        return string.format('Error running post update hook: %s', jr.stderr)
       end
     end
   end
 end, 2)
 
---- @alias Pckr.Task fun(plugin: Pckr.Plugin, disp: Pckr.Display, results: table<string,Pckr.Result>, cb: fun()): string, string[]
+--- @alias Pckr.Task fun(plugin: Pckr.Plugin, disp: Pckr.Display, cb: fun()): string?, string?
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @param results table<string,Pckr.Result>
---- @return string, string[]?
-local install_task = a.sync(function(plugin, disp, results)
+--- @return string, string?
+local install_task = a.sync(function(plugin, disp)
   disp:task_start(plugin.name, 'installing...')
 
   local plugin_type = require('pckr.plugin_types')[plugin.type]
@@ -173,29 +208,14 @@ local install_task = a.sync(function(plugin, disp, results)
     log.fmt_debug('Failed to install %s: %s', plugin.name, vim.inspect(err))
   end
 
-  results[plugin.name] = { err = err }
   return plugin.name, err
-end, 3)
-
---- @param task Pckr.Task
---- @param plugins string[]
---- @param disp? Pckr.Display
---- @param results table<string,Pckr.Result>
---- @return fun(function)[]
-local function create_tasks(task, plugins, disp, results)
-  local tasks = {} --- @type (fun(function))[]
-  for _, v in ipairs(plugins) do
-    tasks[#tasks + 1] = a.curry(task, pckr_plugins[v], disp, results)
-  end
-
-  return tasks
-end
+end, 2)
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @param updates table<string,Pckr.Result>
---- @return string?, string[]?
-local update_task = a.sync(function(plugin, disp, updates)
+--- @param __cb function
+--- @return string?, string?
+local update_task = a.sync(function(plugin, disp, __cb)
   disp:task_start(plugin.name, 'updating...')
 
   if plugin.lock then
@@ -218,13 +238,13 @@ local update_task = a.sync(function(plugin, disp, updates)
 
   if plugin.err then
     disp:task_failed(plugin.name, 'failed to update', plugin.err)
-    log.fmt_debug('Failed to update %s: %s', plugin.name, table.concat(plugin.err, '\n'))
+    log.fmt_debug('Failed to update %s: %s', plugin.name, plugin.err)
   elseif actual_update then
     local info = {}
     local ncommits = 0
-    if plugin.messages and #plugin.messages > 0 then
+    if plugin.messages then
       table.insert(info, 'Commits:')
-      for _, m in ipairs(plugin.messages) do
+      for _, m in ipairs(vim.split(plugin.messages, '\n')) do
         for _, line in ipairs(vim.split(m, '\n')) do
           table.insert(info, '    ' .. line)
           ncommits = ncommits + 1
@@ -240,211 +260,147 @@ local update_task = a.sync(function(plugin, disp, updates)
     disp:task_done(plugin.name, 'already up to date')
   end
 
-  updates[plugin.name] = { err = plugin.err }
   return plugin.name, plugin.err
-end, 3)
+end, 2)
 
---- @param update_plugins string[]
---- @param disp Pckr.Display
---- @param updates table<string,Pckr.Result>
---- @return (fun(function))[]
-local function get_update_tasks(update_plugins, disp, updates)
-  local tasks = {} --- @type (fun(function))[]
-  for _, v in ipairs(update_plugins) do
-    local plugin = pckr_plugins[v]
-    if not plugin then
-      log.fmt_error('Unknown plugin: %s', v)
-    end
-    if plugin and not plugin.lock then
-      tasks[#tasks + 1] = a.curry(update_task, plugin, disp, updates)
-    end
-  end
-
-  if #tasks == 0 then
-    log.info('Nothing to update!')
-  end
-
-  return tasks
-end
-
--- Find and remove any plugins not currently configured for use
---- @param plugins table<string,Pckr.Plugin>
---- @return string[] removed
-local do_clean = a.sync(function(plugins)
+--- Find and remove any plugins not currently configured for use
+local do_clean = a.sync(function()
   log.debug('Starting clean')
 
-  local plugins_to_remove = fsstate.find_extra_plugins(plugins)
+  local to_remove = fsstate.find_extra_plugins(pckr_plugins)
 
-  log.debug('extra plugins', plugins_to_remove)
+  log.debug('extra plugins', to_remove)
 
-  if not next(plugins_to_remove) then
+  if not next(to_remove) then
     log.info('Already clean!')
-    return {}
+    return
   end
 
   a.main()
 
-  local lines = {}
-  for path, _ in pairs(plugins_to_remove) do
-    table.insert(lines, '  - ' .. path)
+  local lines = {} --- @type string[]
+  for path, _ in pairs(to_remove) do
+    lines[#lines + 1] = '  - ' .. path
   end
 
   if not config.autoremove
     and not display.ask_user('Removing the following directories. OK? (y/N)', lines)
   then
     log.warn('Cleaning cancelled!')
-    return {}
+    return
   end
 
-  for path, _ in pairs(plugins_to_remove) do
+  for path in pairs(to_remove) do
     local result = vim.fn.delete(path, 'rf')
     if result == -1 then
       log.fmt_warn('Could not remove %s', path)
     end
-    plugins_to_remove[path] = nil
+  end
+end, 0)
+
+--- @param clean boolean
+--- @param install boolean
+--- @param update boolean
+--- @param plugins? string[]
+local function sync(clean, install, update, plugins)
+  if not plugins or #plugins == 0 then
+    plugins = vim.tbl_keys(pckr_plugins)
   end
 
-  log.debug('Removed', plugins_to_remove)
-
-  return vim.tbl_keys(plugins_to_remove)
-end, 4)
-
---- Install operation:
---- Installs missing plugins, then updates helptags
---- @param install_plugins string[]
---- @param _opts? table
---- @param __cb fun()
-M.install = a.sync(function(install_plugins, _opts, __cb)
-  if not install_plugins then
-    local missing = fsstate.find_missing_plugins(pckr_plugins)
-    install_plugins = vim.tbl_values(missing)
+  if clean then
+    do_clean()
   end
 
-  if #install_plugins == 0 then
-    log.info('All configured plugins are installed')
-    return
-  end
+  local missing = fsstate.find_missing_plugins(pckr_plugins)
+  local missing_plugins, installed_plugins = util.partition(missing, plugins)
 
   a.main()
 
-  log.debug('Gathering install tasks')
-
   local disp = open_display()
-  local installs = {} --- @type table<string,Pckr.Result>
 
   local delta = util.measure(function()
-    local install_tasks = create_tasks(install_task, install_plugins, disp, installs)
-    run_tasks(install_tasks, disp, 'installing')
+    if install then
+      log.debug('Gathering install tasks')
+      local results = map_task(install_task, missing_plugins, disp, 'installing')
+      a.main()
+      update_helptags(results)
+    end
 
-    a.main()
-    update_helptags(installs)
+    if update then
+      log.debug('Gathering update tasks')
+      local results = map_task(update_task, installed_plugins, disp, 'updating')
+      a.main()
+      update_helptags(results)
+    end
   end)
 
   disp:finish(delta)
+end
+
+--- Install operation:
+--- Installs missing plugins, then updates helptags
+--- @param plugins? string[]
+--- @param _opts table?
+--- @param __cb function
+M.install = a.sync(function(plugins, _opts, __cb)
+  sync(false, true, false, plugins)
 end, 2)
 
 --- Update operation:
 --- Takes an optional list of plugin names as an argument. If no list is given,
---- operates on all managed plugin then updates installed plugins and updates
---- helptags. - Options can be specified in the first argument as either a table -
---- @param update_plugins string[]
-M.update = a.void(function(update_plugins)
-  if #update_plugins == 0 then
-    update_plugins = vim.tbl_keys(pckr_plugins)
-  end
-
-  local missing = fsstate.find_missing_plugins(pckr_plugins)
-
-  local _, installed_plugins = util.partition(vim.tbl_values(missing), update_plugins)
-
-  local updates = {}
-
-  a.main()
-
-  local disp = open_display()
-
-  local delta = util.measure(function()
-    a.main()
-
-    log.debug('Gathering update tasks')
-    local tasks = get_update_tasks(installed_plugins, disp, updates)
-    run_tasks(tasks, disp, 'updating')
-
-    a.main()
-    update_helptags(updates)
-  end)
-
-  disp:finish(delta)
-end)
+--- operates on all managed plugins then updates installed plugins and updates
+--- helptags.
+--- @param plugins? string[] List of plugin names to update.
+--- @param _opts table?
+--- @param __cb function
+M.update = a.sync(function(plugins, _opts, __cb)
+  sync(false, false, true, plugins)
+end, 2)
 
 --- Sync operation:
 --- Takes an optional list of plugin names as an argument. If no list is given,
---- operates on all managed plugins. Fixes plugin types, installs missing
---- plugins, then updates installed plugins and updates helptags and rplugins
---- Options can be specified in the first argument as either a table
---- @param update_plugins string[]
-M.sync = a.void(function(update_plugins)
-  if #update_plugins == 0 then
-    update_plugins = vim.tbl_keys(pckr_plugins)
-  end
+--- operates on all managed plugins. Installs missing plugins, then updates
+--- installed plugins and updates helptags
+--- @param plugins? string[]
+--- @param _opts table?
+--- @param __cb function
+M.sync = a.sync(function(plugins, _opts, __cb)
+  sync(true, true, true, plugins)
+end, 2)
 
-  local results = {
-    moves = {}, --- @type table<string,Pckr.Result>
-    removals = {}, --- @type string[]
-    installs = {}, --- @type table<string,Pckr.Result>
-    updates = {}, --- @type table<string,Pckr.Result>
-  }
-
-  results.removals = do_clean(pckr_plugins)
-
-  local missing = fsstate.find_missing_plugins(pckr_plugins)
-
-  local missing_plugins, installed_plugins =
-    util.partition(vim.tbl_values(missing), update_plugins)
-
-  a.main()
-
-  local disp = open_display()
-
-  local delta = util.measure(function()
-    local tasks = {}
-
-    log.debug('Gathering install tasks')
-    vim.list_extend(tasks, create_tasks(install_task, missing_plugins, disp, results.installs))
-
-    a.main()
-
-    log.debug('Gathering update tasks')
-    vim.list_extend(tasks, get_update_tasks(installed_plugins, disp, results.updates))
-
-    run_tasks(tasks, disp, 'syncing')
-
-    a.main()
-    update_helptags(vim.tbl_extend('error', results.installs, results.updates))
-  end)
-
-  disp:finish(delta)
-end)
-
-M.status = a.sync(function(_, _)
+--- @param _ any
+--- @param _opts table?
+--- @param __cb function
+M.status = a.sync(function(_, _opts, __cb)
   require('pckr.status').run()
 end, 2)
 
 --- Clean operation:
--- Finds plugins present in the `pckr` package but not in the managed set
-M.clean = a.void(function(_, _)
-  do_clean(pckr_plugins)
-end)
+--- Finds plugins present in the `pckr` package but not in the managed set
+--- @param _ any
+--- @param _opts table?
+--- @param __cb function
+M.clean = a.sync(function(_, _opts, __cb)
+  do_clean()
+end, 2)
 
-M.lock = a.sync(function(_, _)
+--- @param _ any
+--- @param _opts table?
+--- @param __cb function
+M.lock = a.sync(function(_, _opts, __cb)
   require('pckr.lockfile').lock()
 end, 2)
 
-M.restore = a.sync(function(_, _)
+--- @param _ any
+--- @param _opts table?
+--- @param __cb function
+M.restore = a.sync(function(_, _opts, __cb)
   require('pckr.lockfile').restore()
 end, 2)
 
-M.log = function(_, _)
+--- @param _ any
+--- @param _opts table?
+M.log = function(_, _opts)
   local messages = require('pckr.log').messages
   for _, m in ipairs(messages) do
     vim.api.nvim_echo({m}, false, {})

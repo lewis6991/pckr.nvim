@@ -102,7 +102,7 @@ function SystemObj:write(data)
   end
 end
 
---- @return boolean
+--- @return boolean?
 function SystemObj:is_closing()
   local handle = self._state.handle
   return handle == nil or handle:is_closing()
@@ -265,7 +265,7 @@ end
 --- Run a system command
 ---
 --- @param cmd string[]
---- @param opts? SystemOpts
+--- @param opts? vim.SystemOpts
 --- @param on_exit? fun(out: vim.SystemCompleted)
 --- @return vim.SystemObj
 local function system(cmd, opts, on_exit)

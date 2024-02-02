@@ -79,6 +79,7 @@ local function round(x, increment)
   return (x > 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)) * increment
 end
 
+--- @param ... any
 --- @return string[]
 local function stringify(...)
   local t = {} --- @type string[]
@@ -107,10 +108,10 @@ if min_active_level then
   end
 end
 
-local cache_dir = vim.fn.stdpath('cache')
+local cache_dir = vim.fn.stdpath('cache') --[[@as string]]
 
 local messages = {} --- @type {[1]: string, [1]: string}[]
-local outfile = string.format('%s/pckr.nvim.log', cache_dir)
+-- local outfile = string.format('%s/pckr.nvim.log', cache_dir)
 vim.fn.mkdir(cache_dir, 'p')
 
 --- @type table<Pckr.LogLevel,integer>

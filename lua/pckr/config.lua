@@ -59,7 +59,7 @@ local join_paths = util.join_paths
 
 --- @type Pckr.Config
 local default_config = {
-  package_root = join_paths(vim.fn.stdpath('data'), 'site', 'pack'),
+  package_root = join_paths(vim.fn.stdpath('data') --[[@as string]], 'site', 'pack'),
   pack_dir = '',
   start_dir = '',
   opt_dir = '',
@@ -89,7 +89,7 @@ local default_config = {
   },
   log = { level = 'info' },
   lockfile = {
-    path = util.join_paths(vim.fn.stdpath('config'), 'pckr', 'lockfile.lua'),
+    path = util.join_paths(vim.fn.stdpath('config') --[[@as string]], 'pckr', 'lockfile.lua'),
   },
   autoremove = false,
   autoinstall = true,

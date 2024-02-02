@@ -53,8 +53,8 @@ local config = require('pckr.config')
 --- Built from a simple plugin spec (a string). Used for requires
 --- @field simple boolean
 ---
---- @field messages? string[]
---- @field err? string[]
+--- @field messages? string
+--- @field err? string
 
 --- @alias Pckr.PluginType
 --- | 'git'

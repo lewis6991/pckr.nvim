@@ -8,9 +8,9 @@ local M = {}
 --- Main exposed function for the jobs module. Takes a task and options and returns an async
 -- function that will run the task with the given opts via vim.loop.spawn
 --- @param task string|string[]
---- @param opts SystemOpts
+--- @param opts vim.SystemOpts
 --- @param callback? fun(_: vim.SystemCompleted)
---- @type fun(task: string|string[], opts: SystemOpts): vim.SystemCompleted
+--- @type fun(task: string|string[], opts: vim.SystemOpts): vim.SystemCompleted
 M.run = a.wrap(function(task, opts, callback)
   if type(task) == 'string' then
     local shell = os.getenv('SHELL') or vim.o.shell
