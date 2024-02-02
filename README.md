@@ -295,22 +295,6 @@ pckr.add{
 }
 ```
 
-### Performing plugin management operations
-
-> 🚧 **TODO**:
->
-> API here will be similar to what it was before with the only exception being the
-> final argument to every command will be a callback which is called when the operation finishes.
-
-`pckr` exposes the following functions for common plugin management operations. In all of the
-below, `plugins` is an optional table of plugin names; if not provided, the default is "all managed
-plugins":
-
-- `pckr.install(plugins)`: Install the specified plugins if they are not already installed
-- `pckr.update(plugins)`: Update the specified plugins, installing any that are missing
-- `pckr.update(opts, plugins)`: First argument can be a table specifying options, such as `{preview_updates = true}` to preview potential changes before updating (same as `PckrUpdate --preview`).
-- `pckr.clean()`: Remove any disabled or no longer managed plugins
-
 ## Debugging
 `pckr.nvim` logs to `stdpath(cache)/pckr.nvim.log`. Looking at this file is usually a good start
 if something isn't working as expected.

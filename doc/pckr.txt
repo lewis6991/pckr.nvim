@@ -27,7 +27,7 @@ REQUIREMENTS                                     *pckr-intro-requirements*
   - credit to @TimUntersberger for this note)
 
 ==============================================================================
-FEATURES                                         *pckr-intro-features*
+FEATURES                                                        *pckr-features*
 
 - Declarative plugin specification
 - Support for dependencies
@@ -41,7 +41,7 @@ FEATURES                                         *pckr-intro-features*
 - Support for local plugins
 
 ==============================================================================
-QUICKSTART                                       *pckr-intro-quickstart*
+QUICKSTART                                                    *pckr-quickstart*
 
 To get started, first clone this repository to somewhere on your `packpath`, e.g.: >bash
   git clone https://github.com/lewis6991/pckr.nvim\
@@ -112,36 +112,37 @@ Then you can write your plugin specification in Lua, e.g. (in `~/.config/nvim/lu
 
 `pckr` provides the following commands: *pckr-default-commands* *pckr-commands*
 
-`Pckr clean`                                          *pckr-commands-clean*
+`Pckr clean`                                                *pckr-commands-clean*
 Remove any disabled or unused plugins.
 
-`Pckr install`                                      *pckr-commands-install*
+`Pckr install`                                            *pckr-commands-install*
 Clean, then install missing plugins.
 
-`Pckr update`                                        *pckr-commands-update*
-Update installed plugins.
+`Pckr update`                                              *pckr-commands-update*
+ Update installed plugins.
 Supports the `--preview` flag as an optional first argument to preview
 updates.
 
-`Pckr sync`                                            *pckr-commands-sync*
+`Pckr sync`                                                  *pckr-commands-sync*
 Clean, then update and install plugins.
 Supports the `--preview` flag as an optional first argument to preview
 updates.
 
-`Pckr lock`                                            *pckr-commands-lock*
+`Pckr lock`                                                  *pckr-commands-lock*
 TODO
 
-`Pckr restore`                                      *pckr-commands-restore*
+`Pckr restore`                                            *pckr-commands-restore*
 TODO
 
 ==============================================================================
-USAGE                                          *pckr-usage*
+USAGE                                                              *pckr-usage*
 
 Although the example in |pckr-intro-quickstart| will be enough to get you
 going for basic usage, `pckr` has a number of other features and options
 detailed in this section.
 
-STARTUP                                        *pckr-startup*
+==============================================================================
+STARTUP                                                          *pckr-startup*
 
 The easiest way to use `pckr` is via the |pckr.add()| function.
 `spec` should be a table containing a list of plugin specs: >lua
@@ -161,7 +162,8 @@ Configuration can be provided via |pckr.setup()|: >lua
 See |pckr-configuration| for the allowed configuration keys.
 
 
-CONFIGURATION                                  *pckr-configuration*
+==============================================================================
+CONFIGURATION                                              *pckr-configuration*
 `pckr` provides the following configuration variables, presented in the
 structure of the `config` table expected by `startup` or `init`, with their
 default values: >lua
@@ -198,7 +200,9 @@ default values: >lua
 
 <
 
-SPECIFYING PLUGINS                             *pckr-specifying-plugins*
+==============================================================================
+SPECIFYING PLUGINS                                    *pckr-specifying-plugins*
+
 `pckr` is based around declarative specification of plugins. You can declare
 a plugin using the function |pckr.add()|.
 
@@ -209,12 +213,16 @@ Plugin locations may be specified as:
   2. Full URLs (treated as plugins managed with `git`)
   3. `username/repo` paths (treated as Github `git` plugins)
 
-CONFIGURING PLUGINS                            *pckr-plugin-configuration*
+==============================================================================
+CONFIGURING PLUGINS                                 *pckr-plugin-configuration*
+
 `pckr` allows you to configure plugins either before they are loaded (the
 `config_pre` key described in |pckr.add()|) or after they are loaded (the
 `config` key described in |pckr.add()|).
 
-POST-UPDATE HOOKS                              *pckr-plugin-hooks*
+==============================================================================
+POST-UPDATE HOOKS                                           *pckr-plugin-hooks*
+
 You may specify operations to be run after successful installs/updates of a
 plugin with the `run` key. This key may either be a Lua function, which will be
 called with the `plugin` table for this plugin (containing the information
@@ -229,7 +237,9 @@ executed.
 2. Otherwise, `run` is treated as a shell command and run in the installation
 directory of the plugin via `$SHELL -c '<run>'`.
 
-DEPENDENCIES                                   *pckr-plugin-dependencies*
+==============================================================================
+DEPENDENCIES                                         *pckr-plugin-dependencies*
+
 Plugins may specify dependencies via the `requires` key in their specification
 table. This key can be a string or a list (table).
 
@@ -247,7 +257,9 @@ installed.
 Plugins specified in `requires` are removed when no active plugins require
 them.
 
-RESULTS WINDOW KEYBINDINGS                     *pckr-results-keybindings*
+==============================================================================
+RESULTS WINDOW KEYBINDINGS                           *pckr-results-keybindings*
+
 Once an operation completes, the results are shown in the display window.
 `pckr` sets up default keybindings for this window:
 
@@ -260,16 +272,16 @@ They can be configured by changing the value of `config.display.keybindings`
 Setting any of its keys to `false` will disable the corresponding keybinding.
 
 ==============================================================================
-API                                            *pckr-api*
+API                                                                  *pckr-api*
 
-setup({config})                                                *pckr.setup()*
+setup({config})                                                  *pckr.setup()*
     Setup and configure pckr.
 
     If the user does not call this it will be called internally by
     |pckr.add()|.
 
 
-add({spec})                                                      *pckr.add()*
+add({spec})                                                        *pckr.add()*
     `add` allows you to add one or more plugins to the managed set. It can be
     invoked as follows:
     - With a single plugin specification table, e.g. >lua
@@ -290,5 +302,98 @@ add({spec})                                                      *pckr.add()*
 <
 
     - With a list of plugins specified in either of the above two forms
+
+
+install({plugins}, {opts}, {callback})                         *pckr.install()*
+    Installs missing plugins, then updates helptags.
+
+    Attributes: ~
+        {async}
+
+    Parameters: ~
+      • {plugins} (`string[]?`) Plugins to install
+      • {opts}  (`table?`) Options (RFU)
+      • {callback} (`function`)
+
+
+update({plugins}, {opts}, {callback})                           *pckr.update()*
+    Takes an optional list of plugin names as an argument. If no list is
+    given, operates on all managed plugins then updates installed plugins and
+    updates helptags.
+
+    Attributes: ~
+        {async}
+
+    Parameters: ~
+      • {plugins} (`string[]?`) Plugins to update
+      • {opts}  (`table?`) Options (RFU)
+      • {callback} (`function`)
+
+
+sync({plugins}, {opts}, {callback})                               *pckr.sync()*
+    Takes an optional list of plugin names as an argument. If no list is
+    given, operates on all managed plugins. Installs missing plugins, then
+    updates installed plugins and updates helptags
+
+    Attributes: ~
+        {async}
+
+    Parameters: ~
+      • {plugins} (`string[]?`) Plugins to sync
+      • {opts}  (`table?`) Options (RFU)
+      • {callback} (`function`)
+
+
+clean({_}, {opts}, {callback})                                   *pckr.clean()*
+    Removes plugins present in the `pckr` package but not in the managed set.
+
+    Attributes: ~
+        {async}
+
+    Parameters: ~
+      • {_} RFU
+      • {opts}  (`table?`) Options (RFU)
+      • {callback} (`function`)
+
+
+status({_}, {opts}, {callback})                                 *pckr.status()*
+
+    Attributes: ~
+        {async}
+
+    Parameters: ~
+      • {_} RFU
+      • {opts}  (`table?`) Options (RFU)
+      • {callback} (`function`)
+
+
+lock({_}, {opts}, {callback})                                     *pckr.lock()*
+
+    Attributes: ~
+        {async}
+
+    Parameters: ~
+      • {_} RFU
+      • {opts}  (`table?`) Options (RFU)
+      • {callback} (`function`)
+
+
+restore({_}, {opts}, {callback})                               *pckr.restore()*
+
+    Attributes: ~
+        {async}
+
+    Parameters: ~
+      • {_} RFU
+      • {opts}  (`table?`) Options (RFU)
+      • {callback} (`function`)
+
+
+log({_}, {opts})                                                   *pckr.log()*
+
+    Parameters: ~
+      • {_} RFU
+      • {opts}  (`table?`) Options (RFU)
+
 
  vim:tw=78:ts=2:ft=help:norl:
