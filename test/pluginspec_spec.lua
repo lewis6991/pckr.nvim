@@ -47,4 +47,20 @@ describe('plugin spec formats', function()
     ]])
   end)
 
+  it('can setup', function()
+    exec_lua[[
+      require('pckr').setup{
+        max_jobs = 30,
+      }
+    ]]
+  end)
+
+  it('can add plugins', function()
+    exec_lua[[
+      require('pckr').add{
+        'lewis6991/gitsigns/nvim'
+      }
+    ]]
+  end)
+
 end)
