@@ -1,57 +1,53 @@
-local util = {}
+local M = {}
 
 --- Partition seq using values in sub
 --- @generic T
 --- @param sub T[]
 --- @param seq T[]
 --- @return T[], T[]
-function util.partition(sub, seq)
-  local sub_vals = {}
+function M.partition(sub, seq)
+  --- @cast sub any[]
+  --- @cast seq any[]
+
+  local sub_vals = {} --- @type table<any,true>
   for _, val in ipairs(sub) do
     sub_vals[val] = true
   end
 
-  local result = { {}, {} }
+  local res1, res2 = {}, {}
   for _, val in ipairs(seq) do
     if sub_vals[val] then
-      table.insert(result[1], val)
+      table.insert(res1, val)
     else
-      table.insert(result[2], val)
+      table.insert(res2, val)
     end
   end
 
-  return unpack(result)
+  return res1, res2
 end
 
 -- TODO(lewis6991): use vim.loop.os_uname().sysname
-util.is_windows = jit and jit.os == 'Windows' or package.config:sub(1, 1) == '\\'
+M.is_windows = jit and jit.os == 'Windows' or package.config:sub(1, 1) == '\\'
 
-util.use_shellslash = util.is_windows and vim.o.shellslash and true
+M.use_shellslash = M.is_windows and vim.o.shellslash and true
 
 --- @return string
-function util.get_separator()
-  if util.is_windows and not util.use_shellslash then
+function M.get_separator()
+  if M.is_windows and not M.use_shellslash then
     return '\\'
   end
   return '/'
 end
 
---- @param path string
---- @return string
-function util.strip_trailing_sep(path)
-  local res = path:gsub(util.get_separator() .. '$', '', 1)
-  return res
-end
-
 --- @param ... string
 --- @return string
-function util.join_paths(...)
+function M.join_paths(...)
   return (table.concat({ ... }, '/'):gsub('//+', '/'))
 end
 
 --- @param f function
 --- @return number
-function util.measure(f)
+function M.measure(f)
   local start_time = vim.loop.hrtime()
   f()
   return (vim.loop.hrtime() - start_time) / 1e9
@@ -59,7 +55,7 @@ end
 
 --- @param file string
 --- @return string[]?
-function util.file_lines(file)
+function M.file_lines(file)
   if not vim.loop.fs_stat(file) then
     return
   end
@@ -79,7 +75,7 @@ local function ls(path, fn)
     if not name or not t then
       break
     end
-    if fn(util.join_paths(path, name), name, t) == false then
+    if fn(M.join_paths(path, name), name, t) == false then
       break
     end
   end
@@ -87,13 +83,13 @@ end
 
 --- @param path string
 --- @param fn fun(_: string, _: string, _: string): boolean?
-function util.walk(path, fn)
+function M.walk(path, fn)
   ls(path, function(child, name, ftype)
     if ftype == 'directory' then
-      util.walk(child, fn)
+      M.walk(child, fn)
     end
     fn(child, name, ftype)
   end)
 end
 
-return util
+return M

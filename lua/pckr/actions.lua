@@ -142,11 +142,13 @@ local post_update_hook = a.sync(function(plugin, disp)
   end
 end, 2)
 
+--- @alias Pckr.Task fun(plugin: Pckr.Plugin, disp: Pckr.Display, results: table<string,Pckr.Result>, cb: fun()): string, string[]
+
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @param installs table<string,Pckr.Result>
+--- @param results table<string,Pckr.Result>
 --- @return string, string[]?
-local install_task = a.sync(function(plugin, disp, installs)
+local install_task = a.sync(function(plugin, disp, results)
   disp:task_start(plugin.name, 'installing...')
 
   local plugin_type = require('pckr.plugin_types')[plugin.type]
@@ -171,22 +173,19 @@ local install_task = a.sync(function(plugin, disp, installs)
     log.fmt_debug('Failed to install %s: %s', plugin.name, vim.inspect(err))
   end
 
-  installs[plugin.name] = { err = err }
+  results[plugin.name] = { err = err }
   return plugin.name, err
 end, 3)
 
---- @param missing_plugins string[]
+--- @param task Pckr.Task
+--- @param plugins string[]
 --- @param disp? Pckr.Display
---- @param installs table<string,Pckr.Result>
---- @return (fun(function))[]
-local function get_install_tasks(missing_plugins, disp, installs)
-  if #missing_plugins == 0 then
-    return {}
-  end
-
+--- @param results table<string,Pckr.Result>
+--- @return fun(function)[]
+local function create_tasks(task, plugins, disp, results)
   local tasks = {} --- @type (fun(function))[]
-  for _, v in ipairs(missing_plugins) do
-    tasks[#tasks + 1] = a.curry(install_task, pckr_plugins[v], disp, installs)
+  for _, v in ipairs(plugins) do
+    tasks[#tasks + 1] = a.curry(task, pckr_plugins[v], disp, results)
   end
 
   return tasks
@@ -270,8 +269,8 @@ end
 
 -- Find and remove any plugins not currently configured for use
 --- @param plugins table<string,Pckr.Plugin>
---- @param removals? string[]
-local do_clean = a.sync(function(plugins, removals)
+--- @return string[] removed
+local do_clean = a.sync(function(plugins)
   log.debug('Starting clean')
 
   local plugins_to_remove = fsstate.find_extra_plugins(plugins)
@@ -280,7 +279,7 @@ local do_clean = a.sync(function(plugins, removals)
 
   if not next(plugins_to_remove) then
     log.info('Already clean!')
-    return
+    return {}
   end
 
   a.main()
@@ -290,26 +289,24 @@ local do_clean = a.sync(function(plugins, removals)
     table.insert(lines, '  - ' .. path)
   end
 
-  if
-    config.autoremove or display.ask_user('Removing the following directories. OK? (y/N)', lines)
+  if not config.autoremove
+    and not display.ask_user('Removing the following directories. OK? (y/N)', lines)
   then
-    if removals then
-      for r, _ in pairs(plugins_to_remove) do
-        removals[#removals + 1] = r
-      end
-    end
-    local removed = vim.deepcopy(plugins_to_remove)
-    for path, _ in pairs(plugins_to_remove) do
-      local result = vim.fn.delete(path, 'rf')
-      if result == -1 then
-        log.fmt_warn('Could not remove %s', path)
-      end
-      plugins_to_remove[path] = nil
-    end
-    log.debug('Removed', removed)
-  else
     log.warn('Cleaning cancelled!')
+    return {}
   end
+
+  for path, _ in pairs(plugins_to_remove) do
+    local result = vim.fn.delete(path, 'rf')
+    if result == -1 then
+      log.fmt_warn('Could not remove %s', path)
+    end
+    plugins_to_remove[path] = nil
+  end
+
+  log.debug('Removed', plugins_to_remove)
+
+  return vim.tbl_keys(plugins_to_remove)
 end, 4)
 
 --- Install operation:
@@ -336,7 +333,7 @@ M.install = a.sync(function(install_plugins, _opts, __cb)
   local installs = {} --- @type table<string,Pckr.Result>
 
   local delta = util.measure(function()
-    local install_tasks = get_install_tasks(install_plugins, disp, installs)
+    local install_tasks = create_tasks(install_task, install_plugins, disp, installs)
     run_tasks(install_tasks, disp, 'installing')
 
     a.main()
@@ -398,7 +395,7 @@ M.sync = a.void(function(update_plugins)
     updates = {}, --- @type table<string,Pckr.Result>
   }
 
-  do_clean(pckr_plugins, results.removals)
+  results.removals = do_clean(pckr_plugins)
 
   local missing = fsstate.find_missing_plugins(pckr_plugins)
 
@@ -413,7 +410,7 @@ M.sync = a.void(function(update_plugins)
     local tasks = {}
 
     log.debug('Gathering install tasks')
-    vim.list_extend(tasks, get_install_tasks(missing_plugins, disp, results.installs))
+    vim.list_extend(tasks, create_tasks(install_task, missing_plugins, disp, results.installs))
 
     a.main()
 
