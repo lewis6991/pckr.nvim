@@ -295,6 +295,55 @@ pckr.add{
 }
 ```
 
+### Automatically find local plugins
+
+This snippet can be used to automatically detect local plugins in a particular directory.
+
+```lua
+local local_plugin_dir = vim.env.HOME..'/projects/'
+
+local function resolve(x)
+  if type(x) == 'string' and x:sub(1, 1) ~= '/' then
+    local name = vim.split(x, '/')[2]
+    local loc_install = vim.fs.join_paths(local_plugin_dir, name)
+    if name ~= '' and vim.fn.isdirectory(loc_install) == 1 then
+      return loc_install
+    end
+  end
+end
+
+local function try_get_local(spec)
+  if type(spec) == 'string' then
+    return resolve(spec) or spec
+  end
+
+  if not spec or type(spec[1]) ~= 'string' then
+    return spec
+  end
+
+  return resolve(spec[1]) or spec[1]
+end
+
+local function walk_spec(spec, field, fn)
+  if type(spec[field]) == 'table' then
+    for j in ipairs(spec[field]) do
+      walk_spec(spec[field], j, fn)
+    end
+    walk_spec(spec[field], 'requires', fn)
+  end
+  spec[field] = fn(spec[field])
+end
+
+local init {
+  'nvim-treesitter/nvim-treesitter'
+  -- plugins spec
+}
+
+walk_spec({init}, 1, try_get_local)
+
+require('pckr').add(init)
+```
+
 ## Debugging
 `pckr.nvim` logs to `stdpath(cache)/pckr.nvim.log`. Looking at this file is usually a good start
 if something isn't working as expected.

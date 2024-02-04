@@ -56,29 +56,26 @@ local config = require('pckr.config')
 --- @field messages? string
 --- @field err? string
 
---- @alias Pckr.PluginType
---- | 'git'
---- | 'local'
---- | 'unknown'
+--- @alias Pckr.PluginType 'git' | 'local'
 
 local M = {
   --- @type table<string,Pckr.Plugin>
   plugins = {},
 }
 
---- @param path string
+--- @param psuedo_path string
 --- @return string, Pckr.PluginType
-local function guess_plugin_type(path)
-  if vim.startswith(path, 'git://') or vim.startswith(path, 'http') or path:match('@') then
-    return path, 'git'
+local function guess_plugin_type(psuedo_path)
+  if vim.startswith(psuedo_path, 'git://') or vim.startswith(psuedo_path, 'http') or psuedo_path:match('@') then
+    return psuedo_path, 'git'
   end
 
-  if vim.fn.isdirectory(path) ~= 0 then
-    return path, 'local'
+  if vim.fn.isdirectory(psuedo_path) ~= 0 then
+    return psuedo_path, 'local'
   end
 
-  path = table.concat(vim.split(path, '\\', { plain = true }), '/')
-  return config.git.default_url_format:format(path), 'git'
+  psuedo_path = table.concat(vim.split(psuedo_path, '\\', { plain = true }), '/')
+  return config.git.default_url_format:format(psuedo_path), 'git'
 end
 
 --- @param text string
@@ -169,7 +166,7 @@ local function process_spec_item(spec0, required_by)
     return
   end
 
-  local name, path = get_plugin_name(id)
+  local name, psuedo_path = get_plugin_name(id)
 
   if name == '' then
     log.fmt_warn('"%s" is an invalid plugin name!', id)
@@ -193,13 +190,22 @@ local function process_spec_item(spec0, required_by)
     log.debug('Overriding simple plugin spec: ' .. name)
   end
 
-  local install_path_dir = spec.start and config.start_dir or config.opt_dir
-  local install_path = util.join_paths(install_path_dir, name)
+  local url, plugin_type = guess_plugin_type(psuedo_path)
 
-  local url, ptype = guess_plugin_type(path)
+  local is_start = spec.start
 
-  if ptype == 'local' then
-    install_path = path
+  if plugin_type == 'local' and is_start then
+    log.fmt_warn('Ignoring start=true with local plugin', name)
+    is_start = false
+  end
+
+  local install_path --- @type string
+
+  if plugin_type == 'local' then
+    install_path = psuedo_path
+  else
+    local install_path_dir = is_start and config.start_dir or config.opt_dir
+    install_path = util.join_paths(install_path_dir, name)
   end
 
   --- @type Pckr.Plugin
@@ -209,7 +215,7 @@ local function process_spec_item(spec0, required_by)
     rev = spec.rev,
     tag = spec.tag,
     commit = spec.commit,
-    start = spec.start,
+    start = is_start,
     simple = simple,
     cond = spec.cond ~= true and spec.cond or nil, -- must be function or 'false'
     run = spec.run,
@@ -217,7 +223,7 @@ local function process_spec_item(spec0, required_by)
     url = remove_ending_git_url(url),
     install_path = install_path,
     installed = vim.fn.isdirectory(install_path) ~= 0,
-    type = ptype,
+    type = plugin_type,
     config_pre = normconfig(spec.config_pre),
     config = normconfig(spec.config),
     revs = {},

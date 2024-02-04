@@ -7,14 +7,18 @@
 --- @field get_rev     fun(plugin: Pckr.Plugin): string?
 
 --- @type table<string,Pckr.PluginHandler>
-local plugin_types = {}
+local M = {}
 
-return setmetatable(plugin_types, {
-  __index = function(_, k)
+return setmetatable(M, {
+  --- @param t table<string,Pckr.PluginHandler>
+  --- @param k string
+  --- @return Pckr.PluginHandler?
+  __index = function(t, k)
     if k == 'git' then
-      return require('pckr.plugin_types.git')
+      t[k] = require('pckr.plugin_types.git')
     elseif k == 'local' then
-      return require('pckr.plugin_types.local')
+      t[k] = require('pckr.plugin_types.local')
     end
+    return t[k]
   end,
 })

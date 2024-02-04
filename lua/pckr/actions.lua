@@ -224,22 +224,26 @@ local update_task = a.sync(function(plugin, disp, __cb)
   end
 
   local plugin_type = require('pckr.plugin_types')[plugin.type]
-  local actual_update = false
 
   plugin.err = plugin_type.updater(plugin, disp)
-  if not plugin.err and plugin.type == 'git' then
+
+  local did_update = false
+  if not plugin.err then
     local revs = plugin.revs
-    actual_update = revs[1] ~= revs[2]
-    if actual_update then
-      log.fmt_debug('Updated %s', plugin.name)
-      plugin.err = post_update_hook(plugin, disp)
-    end
+    did_update = revs[1] ~= revs[2]
+  end
+
+  if did_update then
+    log.fmt_debug('Updated %s', plugin.name)
+    plugin.err = post_update_hook(plugin, disp)
   end
 
   if plugin.err then
     disp:task_failed(plugin.name, 'failed to update', plugin.err)
     log.fmt_debug('Failed to update %s: %s', plugin.name, plugin.err)
-  elseif actual_update then
+  elseif not did_update then
+    disp:task_done(plugin.name, 'already up to date')
+  else
     local info = {}
     local ncommits = 0
     if plugin.messages then
@@ -256,8 +260,6 @@ local update_task = a.sync(function(plugin, disp, __cb)
     -- msg = fmt('updated: %s...%s', revs[1], revs[2])
     local msg = fmt('updated: %d new commits', ncommits)
     disp:task_succeeded(plugin.name, msg, info)
-  else
-    disp:task_done(plugin.name, 'already up to date')
   end
 
   return plugin.name, plugin.err

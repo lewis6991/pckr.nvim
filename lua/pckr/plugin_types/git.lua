@@ -9,7 +9,7 @@ local async = a.sync
 local fmt = string.format
 local uv = vim.loop
 
---- @class Pckr.PluginHandler
+--- @class Pckr.PluginHandler.Git: Pckr.PluginHandler
 local M = {}
 
 --- @type string[]
@@ -82,7 +82,12 @@ end
 local function git_run(args, opts)
   opts = opts or {}
   opts.env = opts.env or job_env
-  local obj = jobs.run({ config.git.cmd, unpack(args) }, opts)
+  local obj = jobs.run({
+    config.git.cmd,
+    '-c', 'advice.diverging=false',
+    '-c', 'advice.resolveConflict=false',
+    unpack(args)
+  }, opts)
   local ok = obj.code == 0 and obj.signal == 0
   if ok then
     return true, obj.stdout
@@ -464,8 +469,9 @@ end
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
+--- @param ff_only? boolean
 --- @return boolean, string?
-local function update(plugin, disp)
+local function update(plugin, disp, ff_only)
   disp:task_update(plugin.name, 'checking current commit...')
 
   plugin.revs[1] = get_head(plugin.install_path)
@@ -493,10 +499,19 @@ local function update(plugin, disp)
 
   update_task('pulling updates...')
 
-  ok, out = checkout(plugin, update_task)
+  if ff_only then
+    ok, out = git_run({ 'merge', '--ff-only', '--progress'}, {
+      cwd = plugin.install_path,
+      on_stderr = function(chunk)
+        update_task('fast forwarding...', process_progress(chunk))
+      end,
+    })
+  else
+    ok, out = checkout(plugin, update_task)
+  end
 
   if not ok then
-    log_err(plugin, 'failed checkout', out)
+    log_err(plugin, 'failed update', out)
     return false, out
   end
 
@@ -519,30 +534,29 @@ local function update(plugin, disp)
       return false, out
     end
 
-    plugin.messages = out
-
-    ok, out = mark_breaking_changes(plugin, disp)
+    local out2 --- @type string
+    ok, out2 = mark_breaking_changes(plugin, disp)
     if not ok then
-      log_err(plugin, 'failed marking breaking changes', out)
-      return false, out
+      log_err(plugin, 'failed marking breaking changes', out2)
+      return false, out2
     end
   end
 
-  return true
+  return true, out
 end
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
+--- @param ff_only? boolean
 --- @return string?
-M.updater = async(function(plugin, disp)
-  local ok, out = update(plugin, disp)
-  if ok then
-    plugin.messages = out
-    return
+M.updater = async(function(plugin, disp, ff_only)
+  local ok, out = update(plugin, disp, ff_only)
+  if not ok then
+    plugin.err = out
+    return out
   end
-  plugin.err = out
-  return out
-end, 2)
+  plugin.messages = out
+end, 3)
 
 --- @param plugin Pckr.Plugin
 --- @return string?

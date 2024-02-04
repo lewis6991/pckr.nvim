@@ -32,12 +32,15 @@ end
 --- Get installed plugins in `dir`.
 --- @param dir string Directory to search
 --- @return table<string,string> plugins
-local function get_installed_plugins(dir)
+local function get_dir_plugins(dir)
   local plugins = {} --- @type table<string,string>
 
   for name, ty in vim.fs.dir(dir) do
     if ty ~= 'file' then
-      plugins[util.join_paths(dir, name)] = name
+      local path = util.join_paths(dir, name)
+      if vim.uv.fs_stat(path) then
+        plugins[path] = name
+      end
     end
   end
 
@@ -47,8 +50,8 @@ end
 --- @param plugins table<string,Pckr.Plugin>
 --- @return table<string,string>
 function M.find_extra_plugins(plugins)
-  local opt_plugins = get_installed_plugins(config.opt_dir)
-  local start_plugins = get_installed_plugins(config.start_dir)
+  local opt_plugins = get_dir_plugins(config.opt_dir)
+  local start_plugins = get_dir_plugins(config.start_dir)
 
   local extra = {} --- @type table<string,string>
 
@@ -66,29 +69,13 @@ function M.find_extra_plugins(plugins)
   return extra
 end
 
---- @param plugin Pckr.Plugin
---- @param opt_plugins table<string,string> Plugins installed in config.opt_dir
---- @param start_plugins table<string,string> Plugins installed in config.start_dir
---- @return boolean
-local function plugin_installed(plugin, opt_plugins, start_plugins)
-  for path in pairs(plugin.start and start_plugins or opt_plugins) do
-    if cmp_paths(path, plugin.install_path) then
-      return true
-    end
-  end
-  return false
-end
-
 --- @param plugins table<string,Pckr.Plugin>
 --- @return string[]
 function M.find_missing_plugins(plugins)
-  local opt_plugins = get_installed_plugins(config.opt_dir)
-  local start_plugins = get_installed_plugins(config.start_dir)
-
   local missing_plugins = {} --- @type string[]
 
   for plugin_name, plugin in pairs(plugins) do
-    if not plugin_installed(plugin, opt_plugins, start_plugins) then
+    if not plugin.installed then
       missing_plugins[#missing_plugins+1] = plugin_name
     end
   end
