@@ -137,14 +137,16 @@ require('pckr').add{
 :Pckr clean
 
 " Install missing plugins
-:Pckr install
+:Pckr install [plugin]+
 
 " Update installed plugins
-:Pckr update [plugin]
+:Pckr update [plugin]+
 
-" Clean, fix, install then update
-" supports the `--preview` flag as an optional first argument to preview updates
-:Pckr sync
+" Upgrade pckr.nvim
+:Pckr upgrade
+
+" Clean, install, update and upgrade
+:Pckr sync [plugin]+
 
 " View status of plugins
 :Pckr status
