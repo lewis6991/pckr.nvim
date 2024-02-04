@@ -213,7 +213,7 @@ end, 2)
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @param __cb function
+--- @param __cb? function
 --- @return string?, string?
 local update_task = a.sync(function(plugin, disp, __cb)
   disp:task_start(plugin.name, 'updating...')
@@ -300,14 +300,31 @@ local do_clean = a.sync(function()
   end
 end, 0)
 
---- @param clean boolean
---- @param install boolean
---- @param update boolean
+--- @return Pckr.Plugin
+local function get_pckr_spec()
+  local source = debug.getinfo(1, 'S').short_src
+  assert(source:match('/lua/pckr/actions.lua$'))
+  local pckr_loc = source:gsub('/lua/pckr/actions.lua', '')
+
+  return {
+    name = 'pckr.nvim',
+    install_path = pckr_loc,
+    type = 'local',
+    revs = {}
+  }
+end
+
+--- @param op 'sync'|'install'|'update'|'upgrade'|'clean'|
 --- @param plugins? string[]
-local function sync(clean, install, update, plugins)
+local function sync(op, plugins)
   if not plugins or #plugins == 0 then
     plugins = vim.tbl_keys(pckr_plugins)
   end
+
+  local clean = op == 'sync' or op == 'clean'
+  local install = op == 'sync' or op == 'install'
+  local update = op == 'sync' or op == 'update'
+  local upgrade = op == 'sync' or op == 'upgrade'
 
   if clean then
     do_clean()
@@ -334,6 +351,13 @@ local function sync(clean, install, update, plugins)
       a.main()
       update_helptags(results)
     end
+
+    if upgrade then
+      pckr_plugins['pckr.nvim'] = get_pckr_spec()
+      local results = map_task(update_task, {'pckr.nvim'}, disp, 'updating')
+      a.main()
+      update_helptags(results)
+    end
   end)
 
   disp:finish(delta)
@@ -343,9 +367,9 @@ end
 --- Installs missing plugins, then updates helptags
 --- @param plugins? string[]
 --- @param _opts table?
---- @param __cb function
+--- @param __cb? function
 M.install = a.sync(function(plugins, _opts, __cb)
-  sync(false, true, false, plugins)
+  sync('install', plugins)
 end, 2)
 
 --- Update operation:
@@ -354,9 +378,9 @@ end, 2)
 --- helptags.
 --- @param plugins? string[] List of plugin names to update.
 --- @param _opts table?
---- @param __cb function
+--- @param __cb? function
 M.update = a.sync(function(plugins, _opts, __cb)
-  sync(false, false, true, plugins)
+  sync('update', plugins)
 end, 2)
 
 --- Sync operation:
@@ -365,14 +389,18 @@ end, 2)
 --- installed plugins and updates helptags
 --- @param plugins? string[]
 --- @param _opts table?
---- @param __cb function
+--- @param __cb? function
 M.sync = a.sync(function(plugins, _opts, __cb)
-  sync(true, true, true, plugins)
+  sync('sync', plugins)
+end, 2)
+
+M.upgrade = a.sync(function(_, _opts, __cb)
+  sync('upgrade')
 end, 2)
 
 --- @param _ any
 --- @param _opts table?
---- @param __cb function
+--- @param __cb? function
 M.status = a.sync(function(_, _opts, __cb)
   require('pckr.status').run()
 end, 2)
@@ -381,21 +409,21 @@ end, 2)
 --- Finds plugins present in the `pckr` package but not in the managed set
 --- @param _ any
 --- @param _opts table?
---- @param __cb function
+--- @param __cb? function
 M.clean = a.sync(function(_, _opts, __cb)
   do_clean()
 end, 2)
 
 --- @param _ any
 --- @param _opts table?
---- @param __cb function
+--- @param __cb? function
 M.lock = a.sync(function(_, _opts, __cb)
   require('pckr.lockfile').lock()
 end, 2)
 
 --- @param _ any
 --- @param _opts table?
---- @param __cb function
+--- @param __cb? function
 M.restore = a.sync(function(_, _opts, __cb)
   require('pckr.lockfile').restore()
 end, 2)

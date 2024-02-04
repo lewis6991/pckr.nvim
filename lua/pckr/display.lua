@@ -696,7 +696,7 @@ Display.finish = vim.schedule_wrap(function(self, time)
   display.running = false
   self:update_headline_message(string.format('finished in %.3fs', time))
 
-  for plugin_name, _ in pairs(self.items) do
+  for plugin_name in pairs(self.items) do
     local plugin = pckr_plugins[plugin_name]
     if not plugin then
       log.fmt_warn('%s is not in pckr_plugins', plugin_name)

@@ -330,10 +330,26 @@ update({plugins}, {opts}, {callback})                           *pckr.update()*
       • {callback} (`function`)
 
 
+upgrade({_}, {opts}, {callback})                           *pckr.update()*
+    Upgrade pckr.nvim
+
+    Attributes: ~
+        {async}
+
+    Parameters: ~
+      • {_} RFU
+      • {opts}  (`table?`) Options (RFU)
+      • {callback} (`function`)
+
+
 sync({plugins}, {opts}, {callback})                               *pckr.sync()*
     Takes an optional list of plugin names as an argument. If no list is
-    given, operates on all managed plugins. Installs missing plugins, then
-    updates installed plugins and updates helptags
+    given, operates on all managed plugins.
+
+    - Installs missing plugins
+    - Updates plugins
+    - Updates helptags
+    - Upgrade pckr.nvim
 
     Attributes: ~
         {async}
