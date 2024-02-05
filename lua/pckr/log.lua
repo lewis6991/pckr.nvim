@@ -177,7 +177,7 @@ local function log_at_level_file(level_config, message_maker, ...)
   )
 
   -- fp:write(msg)
-  messages[#messages+1] = {msg, level_config.hl}
+  messages[#messages + 1] = { msg, level_config.hl }
 
   -- fp:close()
 end

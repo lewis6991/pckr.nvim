@@ -54,6 +54,7 @@ _G.loadfile = function(path)
   end
 end
 
+--- @param ... string
 local function source_runtime(...)
   local dir = util.join_paths(...)
   ---@type string[], string[]
@@ -61,10 +62,10 @@ local function source_runtime(...)
   util.walk(dir, function(path, name, t)
     local ext = name:sub(-3)
     name = name:sub(1, -5)
-    if (t == "file" or t == "link") then
-      if ext == "lua" then
+    if t == 'file' or t == 'link' then
+      if ext == 'lua' then
         lua_files[#lua_files + 1] = path
-      elseif ext == "vim" then
+      elseif ext == 'vim' then
         vim_files[#vim_files + 1] = path
       end
     end
@@ -114,31 +115,31 @@ end
 --- Implements nvim/runtime.c:load_pack_plugin()
 ---
 --- Make sure plugin is added to 'runtimepath' first.
----@param plugin Pckr.Plugin
----@param force boolean
-local function packadd(plugin, force)
+--- @param plugin Pckr.Plugin
+--- @param bang boolean
+local function packadd(plugin, bang)
   if config.native_packadd then
-    vim.cmd.packadd({ plugin.name, bang = force })
+    vim.cmd.packadd({ plugin.name, bang = bang })
     return
   end
 
-  if vim.v.vim_did_enter ~= 1 and force then
-    -- Do not sourcv
+  if vim.v.vim_did_enter ~= 1 and bang then
+    -- Do not source. We've already added to rtp, so no need to do anything.
     return
   end
 
   local path = plugin.install_path
 
-  source_runtime(path, "plugin")
+  source_runtime(path, 'plugin')
 
   if (vim.g.did_load_filetypes or 0) > 0 then
     vim.cmd.augroup('filetypedetect')
     source_runtime(path, 'ftdetect')
-    vim.cmd.augroup("END")
+    vim.cmd.augroup('END')
   end
 
   if vim.v.vim_did_enter == 1 then
-    source_runtime(path, "after/plugin")
+    source_runtime(path, 'after/plugin')
   end
 end
 
@@ -196,19 +197,19 @@ local function do_loadplugins()
   -- Load plugins from the original rtp, excluding after
   for _, path in ipairs(get_rtp()) do
     if not path:find('after/?$') then
-      source_runtime(path, "plugin")
+      source_runtime(path, 'plugin')
     end
   end
 
   for _, path in ipairs(get_rtp()) do
     if path:find('after/?$') then
-      source_runtime(path, "plugin")
+      source_runtime(path, 'plugin')
     end
   end
 end
 
 local function load_plugins()
-  local plugins = require'pckr.plugin'.plugins
+  local plugins = require('pckr.plugin').plugins
 
   -- Load pckr plugins
   for _, plugin in pairs(plugins) do

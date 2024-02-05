@@ -4,8 +4,7 @@ local log = require('pckr.log')
 --- @class Pckr.PluginHandler.Local: Pckr.PluginHandler
 local M = {}
 
-M.installer = function(_plugin, _disp)
-end
+M.installer = function(_plugin, _disp) end
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display

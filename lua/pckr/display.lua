@@ -96,7 +96,7 @@ local function open_win(inner)
         return true
       end
       api.nvim_win_set_config(win, get_win_config(inner))
-    end
+    end,
   })
 
   if inner then
@@ -151,7 +151,6 @@ local function set_lines(buf, srow, erow, text)
   api.nvim_buf_set_lines(buf, srow, erow, true, text)
   vim.bo[buf].modifiable = false
 end
-
 
 local COMMIT_PAT = [[[0-9a-f]\{7,9}]]
 local COMMIT_SINGLE_PAT = string.format([[\<%s\>]], COMMIT_PAT)

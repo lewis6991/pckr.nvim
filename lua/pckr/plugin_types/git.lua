@@ -25,7 +25,9 @@ do
     GIT_COMMON_DIR = true,
   }
 
-  for k, v in pairs(vim.fn.environ() --[[@as table<string,string>]]) do
+  for k, v in
+    pairs(vim.fn.environ() --[[@as table<string,string>]])
+  do
     if not blocked_env_vars[k] then
       job_env[#job_env + 1] = k .. '=' .. v
     end
@@ -62,8 +64,7 @@ end
 ---@return string[]
 local function get_breaking_commits(commit_bodies)
   local ret = {} --- @type string[]
-  local commits =
-    vim.gsplit(commit_bodies, '===COMMIT_START===', { plain = true })
+  local commits = vim.gsplit(commit_bodies, '===COMMIT_START===', { plain = true })
 
   for commit in commits do
     local commit_parts = vim.split(commit, '===BODY_START===')
@@ -84,9 +85,11 @@ local function git_run(args, opts)
   opts.env = opts.env or job_env
   local obj = jobs.run({
     config.git.cmd,
-    '-c', 'advice.diverging=false',
-    '-c', 'advice.resolveConflict=false',
-    unpack(args)
+    '-c',
+    'advice.diverging=false',
+    '-c',
+    'advice.resolveConflict=false',
+    unpack(args),
   }, opts)
   local ok = obj.code == 0 and obj.signal == 0
   if ok then
@@ -500,7 +503,7 @@ local function update(plugin, disp, ff_only)
   update_task('pulling updates...')
 
   if ff_only then
-    ok, out = git_run({ 'merge', '--ff-only', '--progress'}, {
+    ok, out = git_run({ 'merge', '--ff-only', '--progress' }, {
       cwd = plugin.install_path,
       on_stderr = function(chunk)
         update_task('fast forwarding...', process_progress(chunk))

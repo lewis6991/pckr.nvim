@@ -66,7 +66,11 @@ local M = {
 --- @param psuedo_path string
 --- @return string, Pckr.PluginType
 local function guess_plugin_type(psuedo_path)
-  if vim.startswith(psuedo_path, 'git://') or vim.startswith(psuedo_path, 'http') or psuedo_path:match('@') then
+  if
+    vim.startswith(psuedo_path, 'git://')
+    or vim.startswith(psuedo_path, 'http')
+    or psuedo_path:match('@')
+  then
     return psuedo_path, 'git'
   end
 
@@ -105,7 +109,9 @@ local function is_simple(x)
     return true
   end
 
-  for k in pairs(x --[[@as table<any,any>]]) do
+  for k in
+    pairs(x --[[@as table<any,any>]])
+  do
     if type(k) ~= 'number' then
       return false
     end

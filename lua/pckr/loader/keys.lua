@@ -14,13 +14,14 @@ return function(mode, key, rhs, opts)
     opts.silent = true
   end
 
-  rhs = rhs or function()
-    if mode == 'n' then
-      vim.api.nvim_input(key)
-    else
-      vim.api.nvim_feedkeys(key, mode, false)
+  rhs = rhs
+    or function()
+      if mode == 'n' then
+        vim.api.nvim_input(key)
+      else
+        vim.api.nvim_feedkeys(key, mode, false)
+      end
     end
-  end
 
   --- @param loader fun()
   return function(loader)

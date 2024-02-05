@@ -57,7 +57,7 @@ function M.find_extra_plugins(plugins)
 
   for is_start, dplugins in pairs({
     [false] = opt_plugins,
-    [true] = start_plugins
+    [true] = start_plugins,
   }) do
     for path, name in pairs(dplugins) do
       if not path_is_plugin(path, is_start, plugins) then
@@ -76,7 +76,7 @@ function M.find_missing_plugins(plugins)
 
   for plugin_name, plugin in pairs(plugins) do
     if not plugin.installed then
-      missing_plugins[#missing_plugins+1] = plugin_name
+      missing_plugins[#missing_plugins + 1] = plugin_name
     end
   end
 

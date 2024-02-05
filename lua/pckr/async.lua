@@ -3,11 +3,13 @@ local co = coroutine
 local function validate_callback(func, callback)
   if callback and type(callback) ~= 'function' then
     local info = debug.getinfo(func, 'nS')
-    error(string.format(
-      'Callback is not a function for %s, got: %s',
-      info.short_src .. ':' .. info.linedefined,
-      vim.inspect(callback)
-    ))
+    error(
+      string.format(
+        'Callback is not a function for %s, got: %s',
+        info.short_src .. ':' .. info.linedefined,
+        vim.inspect(callback)
+      )
+    )
   end
 end
 
@@ -96,7 +98,6 @@ function M.void(func)
     execute(func, nil, ...)
   end
 end
-
 
 --- @generic R
 --- @param n integer Mx number of jobs to run concurrently

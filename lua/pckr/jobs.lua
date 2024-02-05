@@ -18,11 +18,7 @@ M.run = a.wrap(function(task, opts, callback)
     task = { shell, minus_c, task }
   end
 
-  log.fmt_trace(
-    'Running job: cmd = %s, cwd = %s',
-    table.concat(task, ' '),
-    opts.cwd
-  )
+  log.fmt_trace('Running job: cmd = %s, cwd = %s', table.concat(task, ' '), opts.cwd)
 
   system(task, opts, function(obj)
     if callback then

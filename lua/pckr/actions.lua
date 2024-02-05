@@ -285,7 +285,8 @@ local do_clean = a.sync(function()
     lines[#lines + 1] = '  - ' .. path
   end
 
-  if not config.autoremove
+  if
+    not config.autoremove
     and not display.ask_user('Removing the following directories. OK? (y/N)', lines)
   then
     log.warn('Cleaning cancelled!')
@@ -310,7 +311,7 @@ local function get_pckr_spec()
     name = 'pckr.nvim',
     install_path = pckr_loc,
     type = 'local',
-    revs = {}
+    revs = {},
   }
 end
 
@@ -354,7 +355,7 @@ local function sync(op, plugins)
 
     if upgrade then
       pckr_plugins['pckr.nvim'] = get_pckr_spec()
-      local results = map_task(update_task, {'pckr.nvim'}, disp, 'updating')
+      local results = map_task(update_task, { 'pckr.nvim' }, disp, 'updating')
       a.main()
       update_helptags(results)
     end
@@ -433,7 +434,7 @@ end, 2)
 M.log = function(_, _opts)
   local messages = require('pckr.log').messages
   for _, m in ipairs(messages) do
-    vim.api.nvim_echo({m}, false, {})
+    vim.api.nvim_echo({ m }, false, {})
   end
 end
 
