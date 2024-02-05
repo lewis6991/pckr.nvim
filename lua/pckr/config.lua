@@ -2,7 +2,7 @@ local util = require('pckr.util')
 
 local join_paths = util.join_paths
 
---- @class Pckr.Config.Display
+--- @class (exact) Pckr.Config.Display
 --- @field non_interactive? boolean
 --- @field prompt_border?   string
 --- @field working_sym?     string
@@ -14,55 +14,49 @@ local join_paths = util.join_paths
 --- @field header_sym?      string
 --- @field keybindings?     table<string,(string|string[])>
 
---- @class Pckr.Config.Git
+--- @class (exact) Pckr.Config.Git
 --- @field cmd?                string
 --- @field depth?              integer
 --- @field clone_timeout?      integer
 --- @field default_url_format? string
 
---- @class Pckr.Config.Log
+--- @class (exact) Pckr.Config.Log
 --- @field level Pckr.LogLevel
 
---- @class Pckr.Config.Lockfile
+--- @class (exact) Pckr.Config.Lockfile
 --- @field path string
 
 --- @class (exact) Pckr.UserConfig
 --- @field package_root? string
---- @field pack_dir?     string
 --- @field max_jobs?     integer
---- @field start_dir?    string
---- @field opt_dir?      string
 --- @field autoremove?   boolean
 --- @field autoinstall?  boolean
 --- @field display?      Pckr.Config.Display
 --- @field git?          Pckr.Config.Git
 --- @field log?          Pckr.Config.Log
 --- @field lockfile?     Pckr.Config.Lockfile
---- @field native_packadd?     boolean
---- @field native_loadplugins? boolean Let pckr handle 'loadplugins'. Note: make
----                                   sure to populate rtp before calling pckr.
 
 --- @class (exact) Pckr.Config : Pckr.UserConfig
 --- @field package_root string
---- @field pack_dir     string
---- @field start_dir    string
---- @field opt_dir      string
 --- @field autoremove   boolean
 --- @field autoinstall  boolean
 --- @field display      Pckr.Config.Display
 --- @field git          Pckr.Config.Git
 --- @field log          Pckr.Config.Log
 --- @field lockfile     Pckr.Config.Lockfile
---- @field native_packadd     boolean
---- @field native_loadplugins boolean Let pckr handle 'loadplugins'. Note: make
----                                   sure to populate rtp before calling pckr.
+--- @field _start_dir   string
+--- @field _opt_dir     string
+--- @field _native_packadd boolean
+--- Let pckr handle 'loadplugins'. Note: make sure to populate rtp before
+--- calling pckr.
+--- @field _native_loadplugins boolean
 
 --- @type Pckr.Config
-local default_config = {
+local config = {
   package_root = join_paths(vim.fn.stdpath('data') --[[@as string]], 'site', 'pack'),
-  pack_dir = '',
-  start_dir = '',
-  opt_dir = '',
+  _pack_dir = '',
+  _start_dir = '',
+  _opt_dir = '',
   max_jobs = nil,
   git = {
     cmd = 'git',
@@ -89,26 +83,28 @@ local default_config = {
   },
   log = { level = 'info' },
   lockfile = {
-    path = util.join_paths(vim.fn.stdpath('config') --[[@as string]], 'pckr', 'lockfile.lua'),
+    path = join_paths(vim.fn.stdpath('config') --[[@as string]], 'pckr', 'lockfile.lua'),
   },
   autoremove = false,
   autoinstall = true,
-  native_packadd = false,
-  native_loadplugins = false,
+  _native_packadd = false,
+  _native_loadplugins = false,
 }
-
-local config = vim.deepcopy(default_config)
 
 --- @param _ table
 --- @param user_config Pckr.UserConfig
 --- @return Pckr.Config
 local function set(_, user_config)
-  config = vim.tbl_deep_extend('force', config, user_config or {})
+  if user_config then
+    config = vim.tbl_deep_extend('force', config, user_config)
+  end
+
   config.package_root = vim.fn.fnamemodify(config.package_root, ':p')
   config.package_root = config.package_root:gsub(util.get_separator() .. '$', '', 1)
-  config.pack_dir = join_paths(config.package_root, 'pckr')
-  config.opt_dir = join_paths(config.pack_dir, 'opt')
-  config.start_dir = join_paths(config.pack_dir, 'start')
+
+  local pack_dir = join_paths(config.package_root, 'pckr')
+  config._opt_dir = join_paths(pack_dir, 'opt')
+  config._start_dir = join_paths(pack_dir, 'start')
 
   if #vim.api.nvim_list_uis() == 0 then
     config.display.non_interactive = true

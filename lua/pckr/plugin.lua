@@ -30,6 +30,7 @@ local config = require('pckr.config')
 --- @field config?      fun()
 --- @field requires?    string[]
 --- @field lock?        boolean
+--- @field _dir?        string
 ---
 --- @field name         string
 --- @field revs         {[1]: string?, [2]: string?}
@@ -205,14 +206,8 @@ local function process_spec_item(spec0, required_by)
     is_start = false
   end
 
-  local install_path --- @type string
-
-  if plugin_type == 'local' then
-    install_path = psuedo_path
-  else
-    local install_path_dir = is_start and config.start_dir or config.opt_dir
-    install_path = util.join_paths(install_path_dir, name)
-  end
+  local install_path_dir = is_start and config._start_dir or config._opt_dir
+  local install_path = util.join_paths(install_path_dir, name)
 
   --- @type Pckr.Plugin
   local plugin = {
@@ -235,6 +230,10 @@ local function process_spec_item(spec0, required_by)
     revs = {},
     required_by = required_by and { required_by.name } or nil,
   }
+
+  if plugin_type == 'local' then
+    plugin._dir = psuedo_path
+  end
 
   if existing and existing.required_by then
     plugin.required_by = plugin.required_by or {}

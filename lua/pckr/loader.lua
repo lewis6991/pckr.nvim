@@ -118,7 +118,7 @@ end
 --- @param plugin Pckr.Plugin
 --- @param bang boolean
 local function packadd(plugin, bang)
-  if config.native_packadd then
+  if config._native_packadd then
     vim.cmd.packadd({ plugin.name, bang = bang })
     return
   end
@@ -176,7 +176,7 @@ function M.load_plugin(plugin)
   end
 
   log.fmt_debug('Loading %s', plugin.name)
-  packadd(plugin, config.native_loadplugins)
+  packadd(plugin, config._native_loadplugins)
   apply_config(plugin, 'config')
 end
 
@@ -230,7 +230,7 @@ function M.setup()
 
   load_plugins()
 
-  if not config.native_loadplugins then
+  if not config._native_loadplugins then
     do_loadplugins()
   end
 end

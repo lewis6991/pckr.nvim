@@ -13,14 +13,14 @@ local function setup(user_config)
   config(user_config)
 
   -- loaded manually in loader.lua
-  vim.go.loadplugins = config.native_loadplugins
+  vim.go.loadplugins = config._native_loadplugins
 
-  if not config.native_packadd then
+  if not config._native_packadd then
     -- We will handle loading of all plugins so minimise packpath
     vim.go.packpath = vim.env.VIMRUNTIME
   end
 
-  for _, dir in ipairs({ config.opt_dir, config.start_dir }) do
+  for _, dir in ipairs({ config._opt_dir, config._start_dir }) do
     if vim.fn.isdirectory(dir) == 0 then
       vim.fn.mkdir(dir, 'p')
     end

@@ -50,8 +50,8 @@ end
 --- @param plugins table<string,Pckr.Plugin>
 --- @return table<string,string>
 function M.find_extra_plugins(plugins)
-  local opt_plugins = get_dir_plugins(config.opt_dir)
-  local start_plugins = get_dir_plugins(config.start_dir)
+  local opt_plugins = get_dir_plugins(config._opt_dir)
+  local start_plugins = get_dir_plugins(config._start_dir)
 
   local extra = {} --- @type table<string,string>
 
