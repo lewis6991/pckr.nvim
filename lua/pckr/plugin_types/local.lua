@@ -1,5 +1,8 @@
 local a = require('pckr.async')
 local log = require('pckr.log')
+local util = require('pckr.util')
+
+local uv = vim.loop
 
 --- @class Pckr.PluginHandler.Local: Pckr.PluginHandler
 local M = {}
@@ -14,8 +17,8 @@ end
 --- @param disp Pckr.Display
 --- @return string?
 M.updater = a.sync(function(plugin, disp)
-  local gitdir = vim.fs.joinpath(plugin.install_path, '.git')
-  if vim.uv.fs_stat(gitdir) then
+  local gitdir = util.join_paths(plugin.install_path, '.git')
+  if uv.fs_stat(gitdir) then
     return require('pckr.plugin_types.git').updater(plugin, disp, true)
   end
   -- Nothing to do

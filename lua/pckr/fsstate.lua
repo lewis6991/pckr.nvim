@@ -38,7 +38,7 @@ local function get_dir_plugins(dir)
   for name, ty in vim.fs.dir(dir) do
     if ty ~= 'file' then
       local path = util.join_paths(dir, name)
-      if vim.uv.fs_stat(path) then
+      if uv.fs_stat(path) then
         plugins[path] = name
       end
     end
