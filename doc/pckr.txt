@@ -330,7 +330,7 @@ update({plugins}, {opts}, {callback})                           *pckr.update()*
       • {callback} (`function`)
 
 
-upgrade({_}, {opts}, {callback})                           *pckr.update()*
+upgrade({_}, {opts}, {callback})                           *pckr.upgrade()*
     Upgrade pckr.nvim
 
     Attributes: ~
