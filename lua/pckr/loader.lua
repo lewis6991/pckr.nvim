@@ -214,7 +214,9 @@ local function load_plugins()
   -- Load pckr plugins
   for _, plugin in pairs(plugins) do
     if not plugin.cond then
-      M.load_plugin(plugin)
+      if plugin.added then
+        M.load_plugin(plugin)
+      end
     else
       for _, cond in ipairs(ensurelist(plugin.cond)) do
         cond(function()

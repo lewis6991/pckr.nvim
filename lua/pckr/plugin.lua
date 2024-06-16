@@ -229,6 +229,7 @@ local function process_spec_item(spec0, required_by)
     config = normconfig(spec.config),
     revs = {},
     required_by = required_by and { required_by.name } or nil,
+    added = not required_by,
   }
 
   if plugin_type == 'local' then
