@@ -19,10 +19,10 @@ return function(cmd)
     end, {
       bang = true,
       nargs = '*',
-      complete = function()
+      complete = function(ArgLead, CmdLine, CursorPos)
         vim.api.nvim_del_user_command(cmd)
         loader()
-        return vim.fn.getcompletion(cmd .. ' ', 'cmdline')
+        return vim.fn.getcompletion(cmd .. ' ' .. ArgLead, 'cmdline')
       end,
     })
   end
