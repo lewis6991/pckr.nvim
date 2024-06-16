@@ -19,17 +19,14 @@ describe('plugin spec formats', function()
         revs = { },
         simple = true,
         type = 'git',
-        url = 'https://github.com/lewis6991/gitsigns.nvim'
+        url = 'https://github.com/lewis6991/gitsigns.nvim',
+        _dep_only = false,
       } }, exec_lua[[
         return require('pckr.plugin').process_spec { 'lewis6991/gitsigns.nvim' }
     ]])
   end)
 
   it('can process a simple table spec', function()
-    exec_lua[[
-      require('pckr.plugin').process_spec {
-      }
-    ]]
     eq({
       ['gitsigns.nvim'] = {
         install_path = '/gitsigns.nvim',
@@ -39,10 +36,72 @@ describe('plugin spec formats', function()
         simple = false,
         tag = 'v0.7',
         type = 'git',
-        url = 'https://github.com/lewis6991/gitsigns.nvim'
+        url = 'https://github.com/lewis6991/gitsigns.nvim',
+        _dep_only = false,
       } }, exec_lua[[
         return require('pckr.plugin').process_spec {
           { 'lewis6991/gitsigns.nvim', tag = "v0.7" }
+        }
+    ]])
+  end)
+
+  it('sets dep_only correctly', function()
+    eq({
+      ['plugin1'] = {
+        install_path = '/plugin1',
+        installed = false,
+        name = 'plugin1',
+        revs = { },
+        simple = false,
+        type = 'git',
+        url = 'https://github.com/plugin1',
+        requires = { 'plugin2' },
+        _dep_only = false,
+      },
+      ['plugin2'] = {
+        install_path = '/plugin2',
+        installed = false,
+        name = 'plugin2',
+        revs = { },
+        simple = true,
+        required_by = { 'plugin1' },
+        type = 'git',
+        url = 'https://github.com/plugin2',
+        _dep_only = true,
+      }
+    }, exec_lua[[
+        return require('pckr.plugin').process_spec {
+          {'plugin1', requires = 'plugin2'}
+        }
+    ]])
+
+    eq({
+      ['plugin1'] = {
+        install_path = '/plugin1',
+        installed = false,
+        name = 'plugin1',
+        revs = { },
+        simple = false,
+        type = 'git',
+        url = 'https://github.com/plugin1',
+        requires = { 'plugin2' },
+        _dep_only = false,
+      },
+      ['plugin2'] = {
+        install_path = '/plugin2',
+        installed = false,
+        name = 'plugin2',
+        revs = { },
+        simple = true,
+        required_by = { 'plugin1' },
+        type = 'git',
+        url = 'https://github.com/plugin2',
+        _dep_only = false,
+      }
+    }, exec_lua[[
+        return require('pckr.plugin').process_spec {
+          {'plugin1', requires = 'plugin2'},
+          'plugin2',
         }
     ]])
   end)

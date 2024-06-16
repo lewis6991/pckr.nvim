@@ -194,7 +194,10 @@ function M.setup()
   -- Load pckr plugins
   for _, plugin in pairs(plugins) do
     if not plugin.cond then
-      M.load_plugin(plugin)
+      -- Deps are loaded in load_plugin()
+      if not plugin._dep_only then
+        M.load_plugin(plugin)
+      end
     else
       for _, cond in ipairs(ensurelist(plugin.cond)) do
         cond(function()

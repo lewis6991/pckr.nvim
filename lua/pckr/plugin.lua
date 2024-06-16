@@ -31,9 +31,10 @@ local config = require('pckr.config')
 --- @field requires?    string[]
 --- @field lock?        boolean
 --- @field _dir?        string
+--- @field _dep_only    boolean
 ---
 --- @field name         string
---- @field revs         {[1]: string?, [2]: string?}
+--- @field revs         [string?, string?]
 --- @field required_by? string[]
 --- @field type              Pckr.PluginType
 --- @field url               string
@@ -46,7 +47,7 @@ local config = require('pckr.config')
 ---
 --- Profiling
 --- @field config_time?      number
---- @field plugin_times?     table<string,{[1]:number,[2]:number}>
+--- @field plugin_times?     table<string,[number,number]>
 --- @field plugin_load_time? number
 --- @field plugin_exec_time? number
 --- @field plugin_time?      number
@@ -161,9 +162,9 @@ local function normconfig(x)
 end
 
 --- @param spec0 string|Pckr.UserSpec
---- @param required_by? Pckr.Plugin
---- @return string?, Pckr.Plugin?
-local function process_spec_item(spec0, required_by)
+--- @param required_by? string
+--- @param plugins table<string,Pckr.Plugin> Output
+local function process_spec_item(spec0, required_by, plugins)
   local spec = normspec(spec0)
   local id = spec[1]
 
@@ -186,12 +187,18 @@ local function process_spec_item(spec0, required_by)
   if existing then
     if simple then
       log.debug('Ignoring simple plugin spec' .. name)
-      return name, existing
-    else
-      if not existing.simple then
-        log.fmt_warn('Plugin "%s" is specified more than once!', name)
-        return name, existing
+      plugins[name] = existing
+      if not required_by then
+        plugins[name]._dep_only = false
       end
+      return
+    elseif not existing.simple then
+      log.fmt_warn('Plugin "%s" is specified more than once!', name)
+      plugins[name] = existing
+      if not required_by then
+        plugins[name]._dep_only = false
+      end
+      return
     end
 
     log.debug('Overriding simple plugin spec: ' .. name)
@@ -228,32 +235,33 @@ local function process_spec_item(spec0, required_by)
     config_pre = normconfig(spec.config_pre),
     config = normconfig(spec.config),
     revs = {},
-    required_by = required_by and { required_by.name } or nil,
+    required_by = required_by and { required_by } or nil,
+    -- required_by is only set when processing the 'requires' field.
+    -- Therefore if it is not set, that means the plugin was added at the
+    -- top level of the spec.
+    _dep_only = not not required_by,
+    _dir = plugin_type == 'local' and psuedo_path or nil,
   }
 
-  if plugin_type == 'local' then
-    plugin._dir = psuedo_path
-  end
-
   if existing and existing.required_by then
-    plugin.required_by = plugin.required_by or {}
-    vim.list_extend(plugin.required_by, existing.required_by)
+    plugin.required_by = vim.list_extend(plugin.required_by or {}, existing.required_by)
   end
 
   M.plugins[name] = plugin
+  plugins[name] = plugin
 
-  local spec_requires = spec.requires
-  if spec_requires then
-    local deps = M.process_spec(spec_requires, plugin)
+  if spec.requires then
+    local deps = M.process_spec(spec.requires, plugin.name)
     plugin.requires = vim.tbl_keys(deps)
+    for nm, dep in pairs(deps) do
+      plugins[nm] = dep
+    end
   end
-
-  return name, plugin
 end
 
 --- The main logic for adding a plugin (and any dependencies) to the managed set
 --- @param spec string|Pckr.UserSpec|(string|Pckr.UserSpec)[]
---- @param required_by? Pckr.Plugin
+--- @param required_by? string
 --- @return table<string,Pckr.Plugin>
 function M.process_spec(spec, required_by)
   local ret = {} --- @type table<string,Pckr.Plugin>
@@ -261,17 +269,11 @@ function M.process_spec(spec, required_by)
   if spec_is_list(spec) then
     --- @cast spec (string|Pckr.UserSpec)[]
     for _, x in ipairs(spec) do
-      local name, plugin = process_spec_item(x, required_by)
-      if name then
-        ret[name] = plugin
-      end
+      process_spec_item(x, required_by, ret)
     end
   else
     --- @cast spec string|Pckr.UserSpec
-    local name, plugin = process_spec_item(spec, required_by)
-    if name then
-      ret[name] = plugin
-    end
+    process_spec_item(spec, required_by, ret)
   end
 
   return ret
