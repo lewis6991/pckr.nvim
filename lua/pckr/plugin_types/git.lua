@@ -381,6 +381,10 @@ local function clone(plugin, update_task, timeout)
     '--progress',
   }
 
+  if config.git.depth and not plugin.branch and not plugin.tag and not plugin.commit then
+    vim.list_extend(clone_cmd, {'--depth', config.git.depth})
+  end
+
   -- partial clone support
   if check_version({ 2, 19, 0 }) then
     vim.list_extend(clone_cmd, {
