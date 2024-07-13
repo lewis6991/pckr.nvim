@@ -14,11 +14,7 @@ return setmetatable(M, {
   --- @param k string
   --- @return Pckr.PluginHandler?
   __index = function(t, k)
-    if k == 'git' then
-      t[k] = require('pckr.plugin_types.git')
-    elseif k == 'local' then
-      t[k] = require('pckr.plugin_types.local')
-    end
+    t[k] = require('pckr.plugin_types.'..k)
     return t[k]
   end,
 })

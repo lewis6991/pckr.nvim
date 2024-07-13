@@ -11,7 +11,7 @@ local M = {}
 --- @param opts vim.SystemOpts
 --- @param callback? fun(_: vim.SystemCompleted)
 --- @type fun(task: string|string[], opts: vim.SystemOpts): vim.SystemCompleted
-M.run = a.wrap(function(task, opts, callback)
+M.run = a.wrap(3, function(task, opts, callback)
   if type(task) == 'string' then
     local shell = os.getenv('SHELL') or vim.o.shell
     local minus_c = shell:find('cmd.exe$') and '/c' or '-c'
@@ -25,6 +25,6 @@ M.run = a.wrap(function(task, opts, callback)
       callback(obj)
     end
   end)
-end, 3)
+end)
 
 return M
