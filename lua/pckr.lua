@@ -12,9 +12,6 @@ local function setup(user_config)
   log.debug('setup')
   config(user_config)
 
-  -- loaded manually in loader.lua
-  vim.go.loadplugins = config._native_loadplugins
-
   if not config._native_packadd then
     -- We will handle loading of all plugins so minimise packpath
     vim.go.packpath = vim.env.VIMRUNTIME

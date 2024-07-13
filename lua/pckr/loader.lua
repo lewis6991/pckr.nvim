@@ -116,14 +116,13 @@ end
 ---
 --- Make sure plugin is added to 'runtimepath' first.
 --- @param plugin Pckr.Plugin
---- @param bang boolean
-local function packadd(plugin, bang)
+local function packadd(plugin)
   if config._native_packadd then
-    vim.cmd.packadd({ plugin.name, bang = bang })
+    vim.cmd.packadd({ plugin.name, bang = true })
     return
   end
 
-  if vim.v.vim_did_enter ~= 1 and bang then
+  if vim.v.vim_did_enter ~= 1 then
     -- Do not source. We've already added to rtp, so no need to do anything.
     return
   end
@@ -176,7 +175,7 @@ function M.load_plugin(plugin)
   end
 
   log.fmt_debug('Loading %s', plugin.name)
-  packadd(plugin, config._native_loadplugins)
+  packadd(plugin)
   apply_config(plugin, 'config')
 end
 
@@ -187,28 +186,9 @@ local function ensurelist(x)
   return type(x) == 'table' and x or { x }
 end
 
---- @return string[]
-local function get_rtp()
-  --- @diagnostic disable-next-line:undefined-field
-  return vim.opt.rtp:get()
-end
+function M.setup()
+  log.debug('LOADING PLUGINS')
 
-local function do_loadplugins()
-  -- Load plugins from the original rtp, excluding after
-  for _, path in ipairs(get_rtp()) do
-    if not path:find('after/?$') then
-      source_runtime(path, 'plugin')
-    end
-  end
-
-  for _, path in ipairs(get_rtp()) do
-    if path:find('after/?$') then
-      source_runtime(path, 'plugin')
-    end
-  end
-end
-
-local function load_plugins()
   local plugins = require('pckr.plugin').plugins
 
   -- Load pckr plugins
@@ -222,16 +202,6 @@ local function load_plugins()
         end)
       end
     end
-  end
-end
-
-function M.setup()
-  log.debug('LOADING PLUGINS')
-
-  load_plugins()
-
-  if not config._native_loadplugins then
-    do_loadplugins()
   end
 end
 
