@@ -132,7 +132,8 @@ local function load_state(plugin)
   return ''
 end
 
-M.run = a.sync(function()
+--- @async
+function M.run()
   local plugins = require('pckr.plugin').plugins
   if plugins == nil then
     log.warn('pckr_plugins table is nil! Cannot run pckr.status()!')
@@ -163,6 +164,6 @@ M.run = a.sync(function()
   disp:update_headline_message(
     fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins), total_time)
   )
-end)
+end
 
 return M

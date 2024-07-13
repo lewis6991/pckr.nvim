@@ -61,7 +61,7 @@ local function get_plugin(disp)
 end
 
 --- @param inner? boolean
---- @return vim.api.keyset.float_config
+--- @return vim.api.keyset.win_config
 local function get_win_config(inner)
   local vpad = inner and 8 or 6
   local hpad = inner and 14 or 10
@@ -392,6 +392,7 @@ local function toggle_info(disp)
   api.nvim_win_set_cursor(disp.win, cursor_pos)
 end
 
+--- @async
 --- Utility function to prompt a user with a question in a floating window
 --- @param headline string
 --- @param body string[]
@@ -832,7 +833,7 @@ local M = {}
 
 --- Utility function to prompt a user with a question in a floating window
 --- @type fun(headline: string, body: string[]): boolean
-M.ask_user = awrap(prompt_user, 3)
+M.ask_user = awrap(3, prompt_user)
 
 --- Open a new display window
 --- @param cbs? Pckr.Display.Callbacks

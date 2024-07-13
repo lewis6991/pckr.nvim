@@ -34,7 +34,7 @@ local function run_tasks(tasks, disp, kind)
   if disp then
     disp:update_headline_message(string.format('%s %d / %d plugins', kind, #tasks, #tasks))
   end
-  return a.join(limit, interrupt_check, tasks)
+  return a.join(limit, tasks, interrupt_check)
 end
 
 --- @param path string
@@ -60,10 +60,11 @@ local function update(path, info)
   f:close()
 end
 
-M.lock = a.sync(function()
+--- @async
+function M.lock()
   local lock_tasks = {} --- @type fun()[]
   for _, plugin in pairs(P.plugins) do
-    lock_tasks[#lock_tasks + 1] = a.sync(function()
+    lock_tasks[#lock_tasks + 1] = a.sync(0, function()
       local plugin_type = plugin_types[plugin.type]
       if plugin_type.get_rev then
         return plugin.url, (plugin_type.get_rev(plugin))
@@ -79,16 +80,16 @@ M.lock = a.sync(function()
     end
   end
 
-  a.main()
+  a.schedule()
   local lockfile = config.lockfile.path
   update(lockfile, info1)
   log.fmt_info('Lockfile created at %s', config.lockfile.path)
-end)
+end
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
 --- @param commit? string
-local restore_plugin = a.sync(function(plugin, disp, commit)
+local restore_plugin = a.sync(3, function(plugin, disp, commit)
   disp:task_start(plugin.name, fmt('restoring to %s', commit))
 
   if plugin.type == 'local' then
@@ -116,12 +117,13 @@ local restore_plugin = a.sync(function(plugin, disp, commit)
   end
 
   disp:task_succeeded(plugin.name, fmt('restored to commit %s', commit))
-end, 3)
+end)
 
 --- @class LockInfo
 --- @field commit string
 
-M.restore = a.sync(function()
+--- @async
+function M.restore()
   local disp = assert(display.open({}))
   disp:update_headline_message('Restoring from lockfile')
 
@@ -136,6 +138,6 @@ M.restore = a.sync(function()
   end
 
   run_tasks(restore_tasks, disp, 'restoring')
-end)
+end
 
 return M

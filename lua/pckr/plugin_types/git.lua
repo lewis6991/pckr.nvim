@@ -403,7 +403,7 @@ end
 local function sanitize_path(path)
   assert(path)
   --- @diagnostic disable-next-line
-  local lerr, stat = a.wrap(uv.fs_lstat, 2)(path)
+  local lerr, stat = a.wait(2, uv.fs_lstat, path)
   --- @diagnostic disable-next-line
   if lerr or stat.type ~= 'link' then
     -- path doesn't exist or isn't a link
@@ -411,14 +411,14 @@ local function sanitize_path(path)
   end
 
   -- path is a link; check destination exists, otherwise delete
-  local err = a.wrap(uv.fs_realpath, 2)(path)
+  local err = a.wait(2, uv.fs_realpath, path)
   if not err then
     -- exists
     return
   end
 
   -- dead link; remove
-  a.wrap(uv.fs_unlink, 2)(path)
+  a.wait(2, uv.fs_unlink, path)
 end
 
 --- @param plugin Pckr.Plugin
@@ -446,10 +446,11 @@ local function install(plugin, disp)
   return true, out
 end
 
+--- @async
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
 --- @return string?
-M.installer = async(function(plugin, disp)
+M.installer = function(plugin, disp)
   local ok, out = install(plugin, disp)
 
   if ok then
@@ -460,7 +461,7 @@ M.installer = async(function(plugin, disp)
   plugin.err = out
 
   return out
-end, 2)
+end
 
 --- @param plugin Pckr.Plugin
 --- @param msg string
@@ -548,22 +549,23 @@ local function update(plugin, disp, ff_only)
   return true, out
 end
 
+--- @async
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
 --- @param ff_only? boolean
 --- @return string?
-M.updater = async(function(plugin, disp, ff_only)
+M.updater = function(plugin, disp, ff_only)
   local ok, out = update(plugin, disp, ff_only)
   if not ok then
     plugin.err = out
     return out
   end
   plugin.messages = out
-end, 3)
+end
 
 --- @param plugin Pckr.Plugin
 --- @return string?
-M.remote_url = async(function(plugin)
+M.remote_url = async(1, function(plugin)
   local ok, out = git_run({ 'remote', 'get-url', 'origin' }, {
     cwd = plugin.install_path,
   })
@@ -571,12 +573,12 @@ M.remote_url = async(function(plugin)
   if ok then
     return out[1]
   end
-end, 1)
+end)
 
 --- @param plugin Pckr.Plugin
 --- @param commit string
 --- @param callback fun(_: string?, _: string?)
-M.diff = async(function(plugin, commit, callback)
+M.diff = async(3, function(plugin, commit, callback)
   local ok, out = git_run({
     'show',
     '--no-color',
@@ -591,11 +593,11 @@ M.diff = async(function(plugin, commit, callback)
   else
     callback(nil, out)
   end
-end, 3)
+end)
 
 --- @param plugin Pckr.Plugin
 --- @return string?
-M.revert_last = async(function(plugin)
+M.revert_last = async(1, function(plugin)
   local ok, out = git_run({ 'reset', '--hard', 'HEAD@{1}' }, {
     cwd = plugin.install_path,
   })
@@ -612,13 +614,13 @@ M.revert_last = async(function(plugin)
   end
 
   log.fmt_info('Reverted update for %s', plugin.name)
-end, 1)
+end)
 
 --- Reset the plugin to `commit`
 --- @param plugin Pckr.Plugin
 --- @param commit string
 --- @return string?
-M.revert_to = async(function(plugin, commit)
+M.revert_to = async(2, function(plugin, commit)
   assert(type(commit) == 'string', fmt("commit: string expected but '%s' provided", type(commit)))
   log.fmt_debug("Reverting '%s' to commit '%s'", plugin.name, commit)
   local ok, out = git_run({ 'reset', '--hard', commit, '--' }, {
@@ -628,13 +630,13 @@ M.revert_to = async(function(plugin, commit)
   if not ok then
     return out
   end
-end, 2)
+end)
 
 --- Returns HEAD's short hash
 --- @param plugin Pckr.Plugin
 --- @return string?
-M.get_rev = async(function(plugin)
+M.get_rev = async(1, function(plugin)
   return get_head(plugin.install_path)
-end, 1)
+end)
 
 return M
