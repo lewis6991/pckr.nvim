@@ -14,31 +14,17 @@ API                                             |pckr-api|
 ==============================================================================
 INTRODUCTION                                    *pckr-introduction*
 
-This is a Neovim plugin manager. It is written in Lua, uses the native
-|packages| feature, and has features for declarative plugin configuration
-inspired by the `use-package` library from Emacs.
+This is a Neovim plugin manager. It is designed to be:
+- versatile via a declarative configuration
+- fast via minimising calls to the file system (unlike native |packages|)
 
 ==============================================================================
 REQUIREMENTS                                     *pckr-intro-requirements*
 
-- You need to be running Neovim v0.7.0+
+- You need to be running Neovim v0.9 or newer.
 - If you are on Windows 10, you need developer mode enabled in order to use
   local plugins (creating symbolic links requires admin privileges on Windows
   - credit to @TimUntersberger for this note)
-
-==============================================================================
-FEATURES                                                        *pckr-features*
-
-- Declarative plugin specification
-- Support for dependencies
-- Expressive configuration and lazy-loading options
-- Uses native packages
-- Extensible
-- Written in Lua, configured in Lua
-- Post-install/update hooks
-- Uses jobs for async installation
-- Support for `git` tags, branches, revisions
-- Support for local plugins
 
 ==============================================================================
 QUICKSTART                                                    *pckr-quickstart*

@@ -2,9 +2,7 @@
 
 Spiritual successor of https://github.com/wbthomason/packer.nvim
 
-## 🚧 WIP 🚧
-
-Main differences to pckr.nvim:
+Main differences to packer.nvim:
 - Heavily refactored
 - Lockfile support
 - No compilation
@@ -45,7 +43,7 @@ add the following snippet somewhere in your config **before** your first usage o
 local function bootstrap_pckr()
   local pckr_path = vim.fn.stdpath("data") .. "/pckr/pckr.nvim"
 
-  if not vim.loop.fs_stat(pckr_path) then
+  if not vim.uv.fs_stat(pckr_path) then
     vim.fn.system({
       'git',
       'clone',
