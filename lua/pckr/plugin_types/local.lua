@@ -20,7 +20,7 @@ end
 M.updater = function(plugin, disp)
   local gitdir = util.join_paths(plugin.install_path, '.git')
   if uv.fs_stat(gitdir) then
-    return require('pckr.plugin_types.git').updater(plugin, disp, true)
+    return require('pckr.plugin_types.git').updater(plugin, disp, plugin.branch == nil)
   end
   -- Nothing to do
 end
