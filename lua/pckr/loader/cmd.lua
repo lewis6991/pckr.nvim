@@ -22,7 +22,7 @@ return function(cmd)
       complete = function(ArgLead, CmdLine, CursorPos)
         vim.api.nvim_del_user_command(cmd)
         loader()
-        return vim.fn.getcompletion(cmd .. ' ' .. ArgLead, 'cmdline')
+        return vim.fn.getcompletion(CmdLine, 'cmdline')
       end,
     })
   end
