@@ -2,10 +2,20 @@ local log = require('pckr.log')
 
 local M = {}
 
+--- @param lead string
 --- @return string[]
-local function command_complete()
+local function command_complete(lead)
   local actions = require('pckr.actions')
-  return vim.tbl_keys(actions)
+  local completion_list = vim.tbl_filter(
+    --- @param name string
+    --- @return boolean
+    function(name)
+      return vim.startswith(name, lead)
+    end,
+    vim.tbl_keys(actions)
+  )
+  table.sort(completion_list)
+  return completion_list
 end
 
 -- Completion user plugins
@@ -36,7 +46,7 @@ function M.complete(arglead, line)
 
   local matches = {}
   if n == 2 then
-    matches = command_complete()
+    matches = command_complete(arglead)
   elseif n > 2 then
     matches = plugin_complete(arglead)
   end
