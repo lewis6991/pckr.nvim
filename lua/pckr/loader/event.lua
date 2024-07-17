@@ -12,9 +12,9 @@ return function(events, pattern)
         if done then
           return true
         end
+        -- HACK: work-around for https://github.com/neovim/neovim/issues/25526
         done = true
         loader()
-        -- TODO(lewis6991): should we re-issue the event? (#1163)
         vim.api.nvim_exec_autocmds(ev.event, {
           buffer = ev.buf,
           group = ev.group,
