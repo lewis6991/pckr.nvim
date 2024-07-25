@@ -176,7 +176,6 @@ require('pckr').setup{
   autoinstall         = true, -- Auto install plugins
   git = {
     cmd = 'git', -- The base command for git operations
-    depth = 1, -- Git clone depth
     clone_timeout = 60, -- Timeout, in seconds, for git clones
     default_url_format = 'https://github.com/%s' -- Lua format string used for "aaa/bbb" style plugins
   },

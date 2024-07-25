@@ -16,7 +16,6 @@ local join_paths = util.join_paths
 
 --- @class (exact) Pckr.Config.Git
 --- @field cmd?                string
---- @field depth?              integer
 --- @field clone_timeout?      integer
 --- @field default_url_format? string
 
@@ -57,7 +56,6 @@ local config = {
   max_jobs = nil,
   git = {
     cmd = 'git',
-    depth = 1,
     clone_timeout = 60,
     default_url_format = 'https://github.com/%s.git',
   },
