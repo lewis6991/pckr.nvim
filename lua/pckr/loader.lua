@@ -122,7 +122,7 @@ local function packadd(plugin)
     return
   end
 
-  if vim.v.vim_did_enter ~= 1 and not plugin.cond then
+  if vim.v.vim_did_enter ~= 1 and not vim.fn.expand('<amatch>') then
     -- Do not source. We've already added to rtp, so no need to do anything.
     return
   end
