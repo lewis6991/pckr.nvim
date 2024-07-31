@@ -267,7 +267,7 @@ local update_task = a.sync(2, function(plugin, disp, __cb)
 end)
 
 --- Find and remove any plugins not currently configured for use
-local do_clean = a.sync(0, function()
+local function do_clean()
   log.debug('Starting clean')
 
   local to_remove = fsstate.find_extra_plugins(pckr_plugins)
@@ -300,7 +300,7 @@ local do_clean = a.sync(0, function()
       log.fmt_warn('Could not remove %s', path)
     end
   end
-end)
+end
 
 --- @return Pckr.Plugin
 local function get_pckr_spec()
