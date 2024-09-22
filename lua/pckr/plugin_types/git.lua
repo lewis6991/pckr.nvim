@@ -36,12 +36,6 @@ do
   job_env[#job_env + 1] = 'GIT_TERMINAL_PROMPT=0'
 end
 
----@param tag string
----@return boolean
-local function has_wildcard(tag)
-  return tag and tag:match('*') ~= nil
-end
-
 local BREAK_TAG_PAT = '[[bB][rR][eE][aA][kK]!?:]'
 local BREAKING_CHANGE_PAT = '[[bB][rR][eE][aA][kK][iI][nN][gG][ _][cC][hH][aA][nN][gG][eE]]'
 local TYPE_EXCLAIM_PAT = '[[a-zA-Z]+!:]'
@@ -316,8 +310,8 @@ local function checkout(plugin, update_task)
   if commit then
     target = commit
   elseif tag then
-    -- Resolve tag
-    if has_wildcard(tag) then
+    if tag:match('%*') then
+      -- Resolve tag
       update_task(fmt('getting tag for wildcard %s...', tag))
       local tagerr
       tag, tagerr = resolve_tag(plugin)
