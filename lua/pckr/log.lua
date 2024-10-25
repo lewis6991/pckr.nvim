@@ -213,6 +213,7 @@ end
 --- @field fmt_warn  fun(fmt: string, ...: any)
 --- @field fmt_error fun(fmt: string, ...: any)
 --- @field fmt_fatal fun(fmt: string, ...: any)
+--- @field messages string[]
 local M = {}
 
 for i, x in ipairs(MODES) do

@@ -4,6 +4,7 @@ local log = require('pckr.log')
 local config = require('pckr.config')
 local plugin = require('pckr.plugin')
 local loader = require('pckr.loader')
+local util = require('pckr.util')
 
 local did_setup = false
 
@@ -29,7 +30,9 @@ local function setup(user_config)
   did_setup = true
 end
 
-local M = {}
+local M = {
+  _spec_time = 0, --- @type integer?
+}
 
 --- @param spec string|Pckr.UserSpec|(string|Pckr.UserSpec)[]
 function M.add(spec)
@@ -38,19 +41,22 @@ function M.add(spec)
   end
 
   log.debug('PROCESSING PLUGIN SPEC')
-  plugin.process_spec(spec)
+  util.measure('spec_time', function()
+    plugin.process_spec(spec)
+  end)
 
-  local to_install = {} --- @type string[]
+  local to_install --- @type string[]?
 
   if config.autoinstall then
-    for name, p in pairs(plugin.plugins) do
+    to_install = {} --- @type string[]?
+    for _, p in ipairs(plugin.plugins) do
       if not p.installed then
-        to_install[#to_install + 1] = name
+        to_install[#to_install + 1] = p.name
       end
     end
   end
 
-  if #to_install > 0 then
+  if to_install and #to_install > 0 then
     local cwin = api.nvim_get_current_win()
     require('pckr.actions').install(to_install, nil, function()
       -- Run loader in initial window so window options set properly

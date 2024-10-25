@@ -26,14 +26,14 @@ local config = require('pckr.config')
 --- @field install_path string
 --- @field cond?         boolean|Pckr.PluginLoader|Pckr.PluginLoader[]
 --- @field run?         fun()|string
---- @field config_pre?  fun()
---- @field config?      fun()
+--- @field config_pre?  fun()|string
+--- @field config?      fun()|string
 --- @field requires?    string[]
 --- @field lock?        boolean
 --- @field _dir?        string
 ---
 --- @field name         string
---- @field revs         {[1]: string?, [2]: string?}
+--- @field revs         [string?, string?]
 --- @field required_by? string[]
 --- @field type              Pckr.PluginType
 --- @field url               string
@@ -42,14 +42,17 @@ local config = require('pckr.config')
 --- Install as a 'start' plugin
 --- @field start?     boolean
 --- @field loaded?    boolean
+--- @field _loaded_after_vim_enter?    boolean
 --- @field installed? boolean
 ---
 --- Profiling
---- @field config_time?      number
---- @field plugin_times?     table<string,{[1]:number,[2]:number}>
---- @field plugin_load_time? number
---- @field plugin_exec_time? number
---- @field plugin_time?      number
+--- @field files? table<string,{[1]:number,[2]:number}>
+--- @field config_time?  number
+--- @field load_time?  number Time spent loading plugin/ and after/plugin/
+--- @field config_pre_time?  number
+--- @field packadd_time?  number
+--- @field total_time?   number
+--- @field _profile? string
 ---
 --- Built from a simple plugin spec (a string). Used for requires
 --- @field simple boolean
@@ -60,8 +63,11 @@ local config = require('pckr.config')
 --- @alias Pckr.PluginType 'git' | 'local'
 
 local M = {
-  --- @type table<string,Pckr.Plugin>
+  --- @type Pckr.Plugin[]
   plugins = {},
+
+  --- @type table<string,Pckr.Plugin>
+  plugins_by_name = {},
 }
 
 --- @param psuedo_path string
@@ -149,20 +155,9 @@ local function spec_is_list(x)
   return true
 end
 
---- @param x string | fun()
---- @return fun()
-local function normconfig(x)
-  if type(x) == 'string' then
-    return function()
-      require(x)
-    end
-  end
-  return x
-end
-
 --- @param spec0 string|Pckr.UserSpec
 --- @param required_by? Pckr.Plugin
---- @return string?, Pckr.Plugin?
+--- @return Pckr.Plugin?
 local function process_spec_item(spec0, required_by)
   local spec = normspec(spec0)
   local id = spec[1]
@@ -180,17 +175,17 @@ local function process_spec_item(spec0, required_by)
     return
   end
 
-  local existing = M.plugins[name]
+  local existing = M.plugins_by_name[name]
   local simple = is_simple(spec0)
 
   if existing then
     if simple then
       log.debug('Ignoring simple plugin spec' .. name)
-      return name, existing
+      return existing
     else
       if not existing.simple then
         log.fmt_warn('Plugin "%s" is specified more than once!', name)
-        return name, existing
+        return existing
       end
     end
 
@@ -225,53 +220,47 @@ local function process_spec_item(spec0, required_by)
     install_path = install_path,
     installed = vim.fn.isdirectory(install_path) ~= 0,
     type = plugin_type,
-    config_pre = normconfig(spec.config_pre),
-    config = normconfig(spec.config),
+    config_pre = spec.config_pre,
+    config = spec.config,
     revs = {},
     required_by = required_by and { required_by.name } or nil,
+    _dir = plugin_type == 'local' and psuedo_path or nil,
   }
-
-  if plugin_type == 'local' then
-    plugin._dir = psuedo_path
-  end
 
   if existing and existing.required_by then
     plugin.required_by = plugin.required_by or {}
     vim.list_extend(plugin.required_by, existing.required_by)
   end
 
-  M.plugins[name] = plugin
+  M.plugins_by_name[name] = plugin
+  M.plugins[#M.plugins + 1] = plugin
 
   local spec_requires = spec.requires
   if spec_requires then
-    local deps = M.process_spec(spec_requires, plugin)
-    plugin.requires = vim.tbl_keys(deps)
+    plugin.requires = {}
+    for _, dep in ipairs(M.process_spec(spec_requires, plugin)) do
+      plugin.requires[#plugin.requires + 1] = dep.name
+    end
   end
 
-  return name, plugin
+  return plugin
 end
 
 --- The main logic for adding a plugin (and any dependencies) to the managed set
 --- @param spec string|Pckr.UserSpec|(string|Pckr.UserSpec)[]
 --- @param required_by? Pckr.Plugin
---- @return table<string,Pckr.Plugin>
+--- @return Pckr.Plugin[]
 function M.process_spec(spec, required_by)
-  local ret = {} --- @type table<string,Pckr.Plugin>
+  local ret = {} --- @type Pckr.Plugin[]
 
   if spec_is_list(spec) then
     --- @cast spec (string|Pckr.UserSpec)[]
     for _, x in ipairs(spec) do
-      local name, plugin = process_spec_item(x, required_by)
-      if name then
-        ret[name] = plugin
-      end
+      ret[#ret + 1] = process_spec_item(x, required_by)
     end
   else
     --- @cast spec string|Pckr.UserSpec
-    local name, plugin = process_spec_item(spec, required_by)
-    if name then
-      ret[name] = plugin
-    end
+    ret[#ret + 1] = process_spec_item(spec, required_by)
   end
 
   return ret

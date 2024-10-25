@@ -1,4 +1,4 @@
---- @param events string[]
+--- @param events string|string[]
 --- @param pattern string?
 --- @return fun(_: fun())
 return function(events, pattern)

@@ -101,7 +101,7 @@ end
 
 --- @generic R
 --- @param n integer Mx number of jobs to run concurrently
---- @param interrupt_check fun()?
+--- @param interrupt_check? fun():boolean?
 --- @param thunks (fun(cb: function): R)[]
 --- @return {[1]: R}[]
 function M.join(n, interrupt_check, thunks)

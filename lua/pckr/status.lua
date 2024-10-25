@@ -1,68 +1,49 @@
 local fmt = string.format
-local a = require('pckr.async')
+local async = require('pckr.async')
 local log = require('pckr.log')
 local display = require('pckr.display')
 
 local M = {}
 
---- @param value string|string[]
---- @return string
-local function format_keys(value)
-  --- @type string, string
-  local mapping, mode
-  if type(value) == 'string' then
-    mapping = value
-    mode = ''
-  else
-    mapping = value[2]
-    mode = value[1] ~= '' and 'mode: ' .. value[1] or ''
-  end
-  return fmt('"%s", %s', mapping, mode)
-end
-
----@param value any
----@return string
-local function format_cmd(value)
-  return fmt('"%s"', value)
-end
-
----@param value any|any[]
----@param formatter fun(_: any): string
----@return string|string[]
-local function unpack_config_value(value, formatter)
-  if type(value) == 'string' then
-    return { value }
-  elseif type(value) == 'table' then
-    local result = {}
-    for _, k in ipairs(value) do
-      local item = formatter and formatter(k) or k
-      table.insert(result, fmt('  - %s', item))
-    end
-    return result
-  end
-  return ''
-end
-
 ---format a configuration value of unknown type into a string or list of strings
 ---@param key string
 ---@param value any
----@return string|string[]
+---@return string|string[]?
 local function format_values(key, value)
-  if key == 'url' then
-    return fmt('"%s"', value)
-  end
-
-  if key == 'keys' then
-    return unpack_config_value(value, format_keys)
-  end
-
-  if key == 'commands' then
-    return unpack_config_value(value, format_cmd)
-  end
-
-  if type(value) == 'function' then
+  if type(value) == 'table' and not next(value) then
+    return
+  elseif type(value) == 'function' then
     local info = debug.getinfo(value, 'Sl')
-    return fmt('<Lua: %s:%s>', info.short_src, info.linedefined)
+    return fmt('"%s:%d"', info.source:sub(2), info.linedefined)
+  elseif key == 'loaded' or key == 'installed' then
+    return
+  elseif vim.endswith(key, 'time') and type(value) == 'number' then
+    return fmt('%.2fms', value)
+  elseif key == 'err' or key == 'messages' then
+    local r = {} --- @type string[]
+    for _, v in ipairs(vim.split(value, '\n')) do
+      r[#r + 1] = '  | '.. v
+    end
+    return r
+  elseif key == 'url' then
+    return vim.inspect(value)
+  elseif key == 'files' then
+    local t = {} --- @type [string,number,number][]
+    for k, v in
+      pairs(value --[[@as table<string,[number,number]>]])
+    do
+      t[#t + 1] = { k, unpack(v) }
+    end
+
+    table.sort(t, function(a, b)
+      return a[2] + a[3] > b[2] + b[3]
+    end)
+
+    local r = {} --- @type string[]
+    for _, v in ipairs(t) do
+      r[#r + 1] = fmt("    '%s': %.2fms (%.2fms)", v[1], v[2] + v[3], v[2])
+    end
+    return r
   end
 
   return vim.inspect(value)
@@ -70,48 +51,48 @@ end
 
 local plugin_keys_exclude = {
   full_name = true,
+  total_time = true,
   name = true,
   simple = true,
+  _dir = true,
 }
 
 --- @param plugin Pckr.Plugin
---- @return number
 local function add_profile_data(plugin)
-  local total_exec_time = 0
-  local total_load_time = 0
+  plugin.files = {}
+
+  plugin.load_time = 0
 
   local path_times = require('pckr.loader').path_times
   for p, d in pairs(path_times) do
     if vim.startswith(p, plugin.install_path .. '/') then
-      plugin.plugin_times = plugin.plugin_times or {}
-      plugin.plugin_times[p] = d
-      total_load_time = total_load_time + d[1]
-      if vim.startswith(p, plugin.install_path .. '/plugin') then
-        total_exec_time = total_exec_time + d[2]
+      p = p:gsub(vim.pesc(plugin.install_path .. '/'), '') --- @type string
+      plugin.files[p] = d
+      if
+        not plugin._loaded_after_vim_enter and vim.startswith(p, 'plugin/')
+        or vim.startswith(p, 'after/plugin/')
+      then
+        plugin.load_time = plugin.load_time + d[1] + d[2]
       end
     end
   end
-
-  plugin.plugin_exec_time = total_exec_time
-  plugin.plugin_load_time = total_load_time
-  plugin.plugin_time = total_load_time + total_exec_time + (plugin.config_time or 0)
-  return plugin.plugin_time
 end
 
---- @param plugin Pckr.Plugin
+--- @param task table<string,any>
 --- @return string[]
-local function get_plugin_status(plugin)
+local function get_task_status(task)
   local config_lines = {}
   for key, value in
-    pairs(plugin --[[@as table<string,any>]])
+    vim.spairs(task --[[@as table<string,any>]])
   do
-    if not plugin_keys_exclude[key] then
+    if not plugin_keys_exclude[key] and not vim.startswith(key, '_') then
+      local key_s = key:gsub('_', ' ')
       local details = format_values(key, value)
       if type(details) == 'string' then
         -- insert a position one so that one line details appear above multiline ones
-        table.insert(config_lines, 1, fmt('%s: %s', key, details))
-      else
-        vim.list_extend(config_lines, { fmt('%s: ', key), unpack(details) })
+        table.insert(config_lines, 1, fmt('- %s: %s', key_s, details))
+      elseif details then
+        vim.list_extend(config_lines, { fmt('- %s: ', key_s), unpack(details) })
       end
     end
   end
@@ -121,48 +102,168 @@ end
 
 --- @param plugin Pckr.Plugin
 --- @return string
-local function load_state(plugin)
-  if not plugin.loaded then
-    if plugin.start then
-      return ' (not installed)'
+local function get_load_state(plugin)
+  if plugin.loaded then
+    if plugin._loaded_after_vim_enter then
+      return '(deferred)'
     end
-    return ' (not loaded)'
+    return ''
+  elseif plugin.installed then
+    return '(not loaded)'
   end
-
-  return ''
+  return '(not installed)'
 end
 
-M.run = a.sync(function()
-  local plugins = require('pckr.plugin').plugins
-  if plugins == nil then
+--- @param total_plugin_time number
+--- @return string[]
+local function pckr_info(total_plugin_time)
+  local pckr_install_path = debug.getinfo(1, 'S').source:sub(2):gsub('/lua.*', '')
+  local measure_times = require('pckr.util').measure_times
+
+  return {
+    fmt('- install_path: "%s"', pckr_install_path),
+    '- profile:',
+    fmt('  - spec time: %.2fms', measure_times.spec_time),
+    fmt('  - load time (deferred): %.2fms', measure_times.load_deferred),
+    fmt('  - load time: %.2fms', measure_times.load),
+    fmt('    - rtp time: %.2fms', measure_times.rtp),
+    fmt('    - walk time: %.2fms', measure_times.walk),
+    fmt('    - packadd time: %.2fms', measure_times.packadd),
+    fmt('  - loadplugins time: %.2fms', measure_times.loadplugins),
+    fmt('  - plugin time: %.2fms', total_plugin_time),
+  }
+end
+
+--- @async
+--- @param plugin Pckr.Plugin
+--- @return string?
+local function get_update_state(plugin)
+  if plugin.lock then
+    return 'locked'
+  end
+
+  local plugin_type = require('pckr.plugin_types')[plugin.type]
+
+  plugin.err = plugin_type.updater(plugin, nil, {check=true})
+
+  async.main()
+
+  if plugin.err then
+    return 'failed to check for updates'
+  end
+
+  local revs = plugin.revs
+  if revs[1] == revs[2] then
+    return -- up-to-date
+  end
+
+  local lines = vim.split(plugin.messages or '', '\n')
+  local ahead = #lines > 0 and vim.startswith(revs[1], lines[1]:match('[^ ]+'))
+
+  local ncommits = #lines
+
+  if ahead then
+    return fmt('%d commits ahead', ncommits)
+  end
+
+  return fmt('update available: %d new commits', ncommits)
+end
+
+--- Creates a copy of a list-like table such that any nested tables are
+--- "unrolled" and appended to the result.
+--- @param t table List-like table
+--- @return table # Flattened copy of the given list-like table
+local function tbl_flatten(t)
+  local result = {}
+  --- @param t0 table<any,any>
+  local function _tbl_flatten(t0)
+    for i = 1, #t0 do
+      local v = t0[i]
+      if type(v) == 'table' then
+        _tbl_flatten(v)
+      elseif v then
+        table.insert(result, v)
+      end
+    end
+  end
+  _tbl_flatten(t)
+  return result
+end
+
+M.run = async.sync(function()
+  local plugins_by_name = require('pckr.plugin').plugins_by_name
+  if not plugins_by_name then
     log.warn('pckr_plugins table is nil! Cannot run pckr.status()!')
     return
   end
 
   local disp = assert(display.open())
 
-  disp:update_headline_message(fmt('Total plugins: %d', vim.tbl_count(plugins)))
+  disp:update_headline_message(fmt('Total plugins: %d', vim.tbl_count(plugins_by_name)))
 
-  local total_time = 0
+  local total_plugin_time = 0
 
-  for plugin_name, plugin in pairs(plugins) do
-    local item = disp.items[plugin_name]
-    item.expanded = false
-    local plugin_time = add_profile_data(plugin)
-    total_time = total_time + plugin_time
+  for _, plugin in pairs(plugins_by_name) do
+    add_profile_data(plugin)
 
-    --- @type string
-    local state = load_state(plugin) .. string.format(' (%.2fms)', plugin.plugin_time)
-    disp:task_done(plugin_name, state, get_plugin_status(plugin))
+    if plugin.loaded then
+      plugin.total_time = plugin.load_time + (plugin.config_time or 0)
+      total_plugin_time = total_plugin_time + plugin.total_time
+    end
   end
 
-  disp:task_sort(function(k1, k2)
-    return plugins[k1].plugin_time > plugins[k2].plugin_time
+  local measure_times = require('pckr.util').measure_times
+  local pckr_time = measure_times.spec_time + measure_times.load + measure_times.loadplugins
+
+  disp:task_done('pckr.nvim', fmt('(%.2fms)', pckr_time), pckr_info(total_plugin_time))
+
+  for _, plugin in pairs(plugins_by_name) do
+      if plugin.loaded and plugin.total_time then
+        plugin._profile = fmt('(%.2fms)', plugin.total_time)
+      end
+
+      local state = table.concat(tbl_flatten({
+        get_load_state(plugin),
+        plugin._profile,
+      }), ' ')
+
+    disp:task_done(plugin.name, state, get_task_status(plugin))
+  end
+
+  disp:task_sort(function(a, b)
+    if a == 'pckr.nvim' then
+      return true
+    elseif b == 'pckr.nvim' then
+      return false
+    end
+
+    return (plugins_by_name[a].total_time or 0) > (plugins_by_name[b].total_time or 0)
   end)
 
-  disp:update_headline_message(
-    fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins), total_time)
-  )
+  local tasks = {} --- @type (fun(function))[]
+  for _, plugin in pairs(plugins_by_name) do
+    tasks[#tasks + 1] = async.sync(function()
+      local state = table.concat(tbl_flatten({
+        get_load_state(plugin),
+        plugin._profile,
+        get_update_state(plugin),
+      }), ' ')
+
+      disp:task_done(plugin.name, state)
+    end)
+  end
+
+  local config = require('pckr.config')
+  local limit = config.max_jobs and config.max_jobs or #tasks
+
+  disp:update_headline_message(fmt('Checking for updates %d / %d plugins', #tasks, #tasks))
+
+  --- @type {[1]: string?, [2]: string?}[]
+  async.join(limit, function()
+    return disp:check()
+  end, tasks)
+
+  disp:update_headline_message(fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins_by_name), pckr_time))
 end)
 
 return M
