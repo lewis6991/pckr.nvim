@@ -22,13 +22,14 @@ function M.join_paths(...)
 end
 
 --- @type table<string, number>
-M.measure_times = setmetatable({}, {
+M.measure_times = {}
+setmetatable(M.measure_times, {
   __index = function()
     return 0
   end,
 })
 
---- @param what string|function
+--- @param what? string|function
 --- @param f? function
 --- @return number
 function M.measure(what, f)

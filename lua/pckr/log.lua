@@ -200,7 +200,7 @@ local function log_at_level(level, level_config, message_maker, ...)
   end
 end
 
---- @class Pckr.Config.Log
+--- @class Pckr.Log
 --- @field trace     fun(...: any)
 --- @field debug     fun(...: any)
 --- @field info      fun(...: any)

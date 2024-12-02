@@ -18,6 +18,24 @@ jobs:
       # Check commit messages
       - uses: webiny/action-conventional-commits@v1.1.0
 
+  luals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: leafo/gh-actions-lua@v9
+        with:
+          luaVersion: "5.1.5"
+
+      - uses: leafo/gh-actions-luarocks@v4
+
+      - name: Download nvim-test
+        run: make nvim-test
+
+      - name: LuaLS
+        run: make luals-check
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -26,6 +44,7 @@ jobs:
       matrix:
         neovim_branch:
           - 'v0.9.5'
+          - 'v0.10.2'
           - 'nightly'
 
     env:
@@ -33,7 +52,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - uses: leafo/gh-actions-lua@v9
         with:
