@@ -1,3 +1,13 @@
+-- Coroutine.running() was changed between Lua 5.1 and 5.2:
+-- - 5.1: Returns the running coroutine, or nil when called by the main thread.
+-- - 5.2: Returns the running coroutine plus a boolean, true when the running
+--    coroutine is the main one.
+--
+-- For LuaJIT, 5.2 behaviour is enabled with LUAJIT_ENABLE_LUA52COMPAT
+--
+-- We need to handle both.
+local main = coroutine.running()
+
 local function validate_callback(func, callback)
   if callback and type(callback) ~= 'function' then
     local info = debug.getinfo(func, 'nS')
@@ -105,7 +115,7 @@ end
 --- @return F
 function M.sync(nargs, func)
   return function(...)
-    assert(not coroutine.running())
+    assert(coroutine.running() == main, 'Cannot call sync function in async context')
     local callback = select(nargs + 1, ...)
     run(func, callback, unpack({ ... }, 1, nargs))
   end
