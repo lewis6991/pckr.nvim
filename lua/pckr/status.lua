@@ -241,7 +241,7 @@ function M.run()
 
   local tasks = {} --- @type (fun(function))[]
   for _, plugin in pairs(plugins_by_name) do
-    tasks[#tasks + 1] = async.sync(function()
+    tasks[#tasks + 1] = async.sync(0, function()
       local state = table.concat(tbl_flatten({
         get_load_state(plugin),
         plugin._profile,

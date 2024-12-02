@@ -14,10 +14,10 @@ local M = {}
 --- @return Pckr.Display
 local function open_display()
   return display.open({
-    diff = function(plugin, commit, callback)
+    diff = async.sync(2, function(plugin, commit, __cb)
       local plugin_type = require('pckr.plugin_types')[plugin.type]
-      plugin_type.diff(plugin, commit, callback)
-    end,
+      plugin_type.diff(plugin, commit)
+    end),
     revert_last = function(plugin)
       local plugin_type = require('pckr.plugin_types')[plugin.type]
       plugin_type.revert_last(plugin)

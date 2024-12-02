@@ -1,14 +1,12 @@
 --- @param mode string
 --- @param key string
---- @param rhs? string|fun()
---- @param opts? vim.api.keyset.keymap
+--- @param _rhs? string|fun()
+--- @param opts? vim.keymap.set.Opts
 --- @return fun(_: fun())
-return function(mode, key, rhs, opts)
+return function(mode, key, _rhs, opts)
   opts = opts or {}
 
-  if opts.desc == nil then
-    opts.desc = 'pckr.nvim lazy load'
-  end
+  opts.desc = opts.desc or 'pckr.nvim lazy load'
 
   if opts.silent == nil then
     opts.silent = true
@@ -16,17 +14,16 @@ return function(mode, key, rhs, opts)
 
   --- @param loader fun()
   return function(loader)
-    local rhs_func = function()
+    vim.keymap.set(mode, key, function()
+      local dopts = opts --[[@as vim.keymap.del.Opts]]
       -- always delete the mapping immediately to prevent recursive mappings
-      vim.keymap.del(mode, key, opts)
+      vim.keymap.del(mode, key, dopts)
       loader()
       if mode == 'n' then
         vim.api.nvim_input(key)
       else
         vim.api.nvim_feedkeys(key, '', false)
       end
-    end
-
-    vim.keymap.set(mode, key, rhs_func, opts)
+    end, opts)
   end
 end
