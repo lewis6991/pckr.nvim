@@ -24,14 +24,14 @@ end
 --- @param _? string
 --- @return string[]
 local function plugin_complete(lead, _)
-  local plugins = require('pckr.plugin').plugins
+  local plugins_by_name = require('pckr.plugin').plugins_by_name
   local completion_list = vim.tbl_filter(
     --- @param name string
     --- @return boolean
     function(name)
       return vim.startswith(name, lead)
     end,
-    vim.tbl_keys(plugins)
+    vim.tbl_keys(plugins_by_name)
   )
   table.sort(completion_list)
   return completion_list
