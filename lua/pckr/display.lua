@@ -2,7 +2,7 @@ local api = vim.api
 local log = require('pckr.log')
 local config = require('pckr.config')
 local awrap = require('pckr.async').wrap
-local pckr_plugins = require('pckr.plugin').plugins
+local pckr_plugins = require('pckr.plugin').plugins_by_name
 
 local ns = api.nvim_create_namespace('pckr_display')
 
@@ -20,7 +20,7 @@ local TITLE = 'pckr.nvim'
 --- @field status? Pckr.Display.Status
 --- @field message? string
 --- @field info? string[]? Additional info that can be collapsed
---- @field expanded boolean Whether info is being displayed
+--- @field expanded? boolean Whether info is being displayed
 --- @field mark? integer Extmark used track the location of the item in the buffer
 --- @field nameMark? integer Extmark used track the location of the item in the buffer
 
@@ -37,9 +37,8 @@ local TITLE = 'pckr.nvim'
 --- @field callbacks?  Pckr.Display.Callbacks
 local Display = {}
 
---- @param disp Pckr.Display
 --- @return string?, {[1]:integer, [2]:integer}?
-local function get_plugin(disp)
+function Display:get_cursor_task()
   local row = unpack(api.nvim_win_get_cursor(0)) - 1
   -- TODO(lewis6991): Another extmark bug(?):
   --       nvim_buf_get_extmarks(0, ns, row-1, row+1, {})
@@ -49,7 +48,7 @@ local function get_plugin(disp)
     --- @type integer, integer, integer
     local id, srow, erow = e[1], e[2], e[4].end_row
     if row >= srow and row <= erow then
-      for name, item in pairs(disp.items) do
+      for name, item in pairs(self.items) do
         if item.mark == id then
           return name, { srow + 1, 0 }
         end
@@ -162,18 +161,18 @@ local function diff(disp)
     return
   end
 
-  if next(disp.items) == nil then
+  if not next(disp.items) then
     log.info('Operations are still running; plugin info is not ready yet')
     return
   end
 
-  local plugin_name = get_plugin(disp)
-  if plugin_name == nil then
+  local task_name = disp:get_cursor_task()
+  if not task_name then
     log.warn('No plugin selected!')
     return
   end
 
-  local plugin = pckr_plugins[plugin_name]
+  local plugin = pckr_plugins[task_name]
 
   if not plugin then
     log.warn('Plugin not available!')
@@ -210,11 +209,54 @@ local function diff(disp)
   end)
 end
 
---- @param self Pckr.Display
---- @param plugin string
+--- @param disp Pckr.Display
+local function goto_file(disp)
+  if not disp.buf then
+    return
+  end
+
+  local plugin_name = disp:get_cursor_task()
+  if not plugin_name then
+    log.warn('No plugin selected!')
+    return
+  end
+
+  local plugin = pckr_plugins[plugin_name]
+
+  if not plugin then
+    log.warn('Plugin not available!')
+    return
+  end
+
+  local current_line = api.nvim_get_current_line()
+  local col = vim.api.nvim_win_get_cursor(0)[2]
+  local head, tail = current_line:sub(1, col), current_line:sub(col + 1)
+  local target = head:match('[^" ]*$') .. tail:match('^[^" ]*') --- @type string
+  local lno = target:match(':(%d+)$') --- @type string?
+  target = target:gsub(':%d+$', '') --- @type string
+
+  local stat = vim.loop.fs_stat(target)
+  if not stat then
+    return
+  end
+
+  if stat.type ~= 'file' then
+    log.warn('Cannot preview', stat.type)
+    return
+  end
+
+  local _buf = open_win(true)
+  vim.cmd.edit(target)
+  vim.wo.foldenable = false
+  if lno then
+    vim.cmd(lno)
+  end
+end
+
+--- @param name string
 --- @return integer?, integer?
-local function get_task_region(self, plugin)
-  local mark = self.items[plugin].mark
+function Display:get_task_region(name)
+  local mark = self.items[name].mark
 
   if not mark then
     return
@@ -240,14 +282,17 @@ local function get_task_region(self, plugin)
 end
 
 --- @param self Pckr.Display
---- @param plugin string
-local function clear_task(self, plugin)
+--- @param name string
+function Display:clear_task(name)
   if not self.buf then
     return
   end
-  local srow, erow = assert(get_task_region(self, plugin))
+  local srow, erow = assert(self:get_task_region(name))
   set_lines(self.buf, srow, erow, {})
-  local item = self.items[plugin]
+  local item = self.items[name]
+  if not item then
+    return
+  end
   api.nvim_buf_del_extmark(self.buf, ns, item.mark)
   item.mark = nil
   api.nvim_buf_del_extmark(self.buf, ns, item.nameMark)
@@ -258,25 +303,24 @@ end
 
 local MAX_COL = 10000
 
---- @param self Pckr.Display
 --- @param plugin string
 --- @param message {[1]: string, [2]:string?}[][]
 --- @param pos? Pckr.TaskPos
-local function update_task_lines(self, plugin, message, pos)
+function Display:update_task_lines(plugin, message, pos)
   local item = self.items[plugin]
 
   -- If pos is given, task will be rendered at the top or bottom of the buffer.
   -- If not given then will use last position, if exists, else bottom.
-  if pos ~= nil or not item.mark then
+  if pos or not item.mark then
     if item.mark then
-      clear_task(self, plugin)
+      self:clear_task(plugin)
     end
 
     local new_row = pos == 'top' and HEADER_LINES or api.nvim_buf_line_count(self.buf)
     item.mark = api.nvim_buf_set_extmark(self.buf, ns, new_row, 0, {})
   end
 
-  local srow, erow = assert(get_task_region(self, plugin))
+  local srow, erow = assert(self:get_task_region(plugin))
 
   local lines = {} --- @type string[]
   for _, l in ipairs(message) do
@@ -325,12 +369,11 @@ local function pad(x)
   return r
 end
 
---- @param self Pckr.Display
---- @param plugin string
+--- @param task string
 --- @param static? boolean
 --- @param top? boolean
-local function render_task(self, plugin, static, top)
-  local item = self.items[plugin]
+function Display:render_task(task, static, top)
+  local item = self.items[task]
 
   local icon --- @type string
   if not item.status or item.status == 'done' then
@@ -347,7 +390,7 @@ local function render_task(self, plugin, static, top)
   local lines = {
     {
       { string.format(' %s ', icon) },
-      { string.format('%s: ', plugin), 'pckrPackageName' },
+      { string.format('%s: ', task), 'pckrPackageName' },
       item.message and { item.message } or nil,
     },
   }
@@ -365,7 +408,7 @@ local function render_task(self, plugin, static, top)
     pos = (item.status == 'success' or item.status == 'failed') and 'top' or nil
   end
 
-  update_task_lines(self, plugin, lines, pos)
+  self:update_task_lines(task, lines, pos)
 end
 
 --- Toggle the display of detailed information for a plugin in the final results display
@@ -375,20 +418,20 @@ local function toggle_info(disp)
     return
   end
 
-  if disp.items == nil or next(disp.items) == nil then
+  if not next(disp.items) then
     log.info('Operations are still running; plugin info is not ready yet')
     return
   end
 
-  local plugin_name, cursor_pos = get_plugin(disp)
-  if plugin_name == nil or cursor_pos == nil then
+  local task_name, cursor_pos = disp:get_cursor_task()
+  if not task_name or not cursor_pos then
     log.warn('No plugin selected!')
     return
   end
 
-  local item = disp.items[plugin_name]
+  local item = disp.items[task_name]
   item.expanded = not item.expanded
-  render_task(disp, plugin_name, true)
+  disp:render_task(task_name, true)
   api.nvim_win_set_cursor(disp.win, cursor_pos)
 end
 
@@ -459,13 +502,14 @@ local function prompt_revert(disp)
   if not disp.buf then
     return
   end
-  if next(disp.items) == nil then
+
+  if not next(disp.items) then
     log.info('Operations are still running; plugin info is not ready yet')
     return
   end
 
-  local plugin_name = get_plugin(disp)
-  if plugin_name == nil then
+  local plugin_name = disp:get_cursor_task()
+  if not plugin_name then
     log.warn('No plugin selected!')
     return
   end
@@ -538,6 +582,14 @@ local keymaps = {
       prompt_revert(display)
     end,
   },
+
+  goto_file = {
+    action = 'goto file under cursor',
+    lhs = 'gf',
+    rhs = function()
+      goto_file(display)
+    end,
+  },
 }
 
 function Display:check()
@@ -545,20 +597,21 @@ function Display:check()
 end
 
 --- Start displaying a new task
---- @param self Pckr.Display
---- @param plugin string
+--- @param name string
 --- @param message string
-Display.task_start = vim.schedule_wrap(function(self, plugin, message)
+function Display:task_start(name, message)
   if not self.buf then
     return
   end
 
-  local item = self.items[plugin]
+  self.items[name] = self.items[name] or {}
+
+  local item = self.items[name]
   item.status = 'running'
   item.message = message
 
-  render_task(self, plugin, nil, true)
-end)
+  self:render_task(name, nil, true)
+end
 
 --- Decrement the count of active operations in the headline
 --- @param disp Pckr.Display
@@ -581,17 +634,18 @@ local function decrement_headline_count(disp)
   end
 end
 
---- @param self Pckr.Display
---- @param plugin string
+--- Update a task as having passively completed
+--- @param name string
 --- @param message string
 --- @param info? string|string[]
 --- @param success? boolean
-local task_done = vim.schedule_wrap(function(self, plugin, message, info, success)
+function Display:task_done(name, message, info, success)
   if not self.buf then
     return
   end
 
-  local item = self.items[plugin]
+  self.items[name] = self.items[name] or {}
+  local item = self.items[name]
 
   if success == true then
     item.status = 'success'
@@ -605,11 +659,13 @@ local task_done = vim.schedule_wrap(function(self, plugin, message, info, succes
   end
 
   item.message = message
-  item.info = normalize_lines(info)
+  if info then
+    item.info = normalize_lines(info)
+  end
 
-  render_task(self, plugin)
+  self:render_task(name)
   decrement_headline_count(self)
-end)
+end
 
 --- @param f fun(p1: string, p2: string): boolean
 function Display:task_sort(f)
@@ -621,46 +677,39 @@ function Display:task_sort(f)
   table.sort(names, f)
 
   for i = #names, 1, -1 do
-    render_task(self, names[i], nil, true)
+    self:render_task(names[i], nil, true)
   end
 end
 
---- Update a task as having passively completed
---- @param plugin string
---- @param message string
---- @param info? string|string[]
-function Display:task_done(plugin, message, info)
-  task_done(self, plugin, message, info, nil)
-end
-
 --- Update a task as having successfully completed
---- @param plugin string
+--- @param name string
 --- @param message string
 --- @param info? string|string[]
-function Display:task_succeeded(plugin, message, info)
-  task_done(self, plugin, message, info, true)
+function Display:task_succeeded(name, message, info)
+  self:task_done(name, message, info, true)
 end
 
 --- Update a task as having unsuccessfully failed
---- @param plugin string
+--- @param name string
 --- @param message string
 --- @param info? string|string[]
-function Display:task_failed(plugin, message, info)
-  task_done(self, plugin, message, info, false)
+function Display:task_failed(name, message, info)
+  self:task_done(name, message, info, false)
 end
 
 --- Update the status message of a task in progress
 --- @param self Pckr.Display
---- @param plugin string
+--- @param name string
 --- @param message string
 --- @param info? string[]
-Display.task_update = vim.schedule_wrap(function(self, plugin, message, info)
-  log.fmt_debug('%s: %s', plugin, message)
+function Display:task_update(name, message, info)
+  log.fmt_debug('%s: %s', name, message)
   if not self.buf then
     return
   end
 
-  local item = self.items[plugin]
+  self.items[name] = self.items[name] or {}
+  local item = self.items[name]
   item.message = message
 
   if info then
@@ -668,13 +717,12 @@ Display.task_update = vim.schedule_wrap(function(self, plugin, message, info)
     item.info = info
   end
 
-  render_task(self, plugin)
-end)
+  self:render_task(name)
+end
 
 --- Update the text of the headline message
---- @param self Pckr.Display
 --- @param message string
-Display.update_headline_message = vim.schedule_wrap(function(self, message)
+function Display:update_headline_message(message)
   if not self.buf then
     return
   end
@@ -683,12 +731,11 @@ Display.update_headline_message = vim.schedule_wrap(function(self, message)
   local width = api.nvim_win_get_width(self.win) - 2
   local pad_width = math.max(math.floor((width - string.len(headline)) / 2.0), 0)
   set_lines(self.buf, 0, HEADER_LINES - 1, string.rep(' ', pad_width) .. headline)
-end)
+end
 
 --- Display the final results of an operation
---- @param self Pckr.Display
 --- @param time number
-Display.finish = vim.schedule_wrap(function(self, time)
+function Display:finish(time)
   if not self.buf then
     return
   end
@@ -696,21 +743,19 @@ Display.finish = vim.schedule_wrap(function(self, time)
   display.running = false
   self:update_headline_message(string.format('finished in %.3fs', time))
 
-  for plugin_name in pairs(self.items) do
-    local plugin = pckr_plugins[plugin_name]
+  for task_name in pairs(self.items) do
+    local plugin = pckr_plugins[task_name]
     if not plugin then
-      log.fmt_warn('%s is not in pckr_plugins', plugin_name)
+      log.fmt_warn('%s is not in pckr_plugins', task_name)
     elseif plugin.breaking_commits and #plugin.breaking_commits > 0 then
-      vim.cmd(
-        'syntax match pckrBreakingChange "' .. plugin_name .. '" containedin=pckrStatusSuccess'
-      )
+      vim.cmd('syntax match pckrBreakingChange "' .. task_name .. '" containedin=pckrStatusSuccess')
       for _, commit_hash in ipairs(plugin.breaking_commits) do
-        log.fmt_warn('Potential breaking change in commit %s of %s', commit_hash, plugin_name)
+        log.fmt_warn('Potential breaking change in commit %s of %s', commit_hash, task_name)
         vim.cmd('syntax match pckrBreakingChange "' .. commit_hash .. '" containedin=pckrHash')
       end
     end
   end
-end)
+end
 
 ---@param str string
 ---@return string
@@ -846,16 +891,7 @@ function M.open(cbs)
 
   display.callbacks = cbs
   display.running = true
-
-  display.items = setmetatable({}, {
-    --- @param t table<string,Pckr.Display.Item>
-    --- @param k string
-    --- @return Pckr.Display.Item
-    __index = function(t, k)
-      t[k] = { expanded = false }
-      return t[k]
-    end,
-  })
+  display.items = {}
 
   set_lines(display.buf, 0, -1, {})
   make_header(display)

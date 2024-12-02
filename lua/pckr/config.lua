@@ -46,6 +46,9 @@ local join_paths = util.join_paths
 --- @field _start_dir   string
 --- @field _opt_dir     string
 --- @field _native_packadd boolean
+--- Let pckr handle 'loadplugins'. Note: make sure to populate rtp before
+--- calling pckr.
+--- @field _native_loadplugins boolean
 
 --- @type Pckr.Config
 local config = {
@@ -82,7 +85,8 @@ local config = {
   },
   autoremove = false,
   autoinstall = true,
-  _native_packadd = false
+  _native_packadd = false,
+  _native_loadplugins = false,
 }
 
 --- @param _ table
