@@ -272,7 +272,7 @@ local function resolve_tag(plugin)
   })
 
   if ok then
-    tag = vim.split(out[#out], '\n')[1]
+    tag = vim.split(out, '\n')[1]
     return tag
   end
 
