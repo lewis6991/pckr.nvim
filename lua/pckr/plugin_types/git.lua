@@ -4,8 +4,6 @@ local jobs = require('pckr.jobs')
 local log = require('pckr.log')
 local util = require('pckr.util')
 
-local async = a.sync
-
 local fmt = string.format
 local uv = vim.loop
 
@@ -182,9 +180,10 @@ local function resolve_ref(dir, ref)
 end
 
 ---@param dir string
+---@param what? string
 ---@return string?
-local function get_head(dir)
-  return resolve_ref(dir, assert(head(dir, '.git', 'HEAD')))
+local function get_head(dir, what)
+  return resolve_ref(dir, assert(head(dir, '.git', what or 'HEAD')))
 end
 
 ---@param dir string
@@ -343,10 +342,8 @@ local function checkout(plugin, update_task)
 end
 
 --- @param plugin Pckr.Plugin
---- @param disp Pckr.Display
 --- @return boolean, string
-local function mark_breaking_changes(plugin, disp)
-  disp:task_update(plugin.name, 'checking for breaking changes...')
+local function mark_breaking_changes(plugin)
   local ok, out = git_run({
     'log',
     '--color=never',
@@ -362,6 +359,7 @@ local function mark_breaking_changes(plugin, disp)
   return ok, out
 end
 
+--- @async
 --- @param plugin Pckr.Plugin
 --- @param update_task fun(msg: string, info?: string[])
 --- @param timeout integer Timeout in ms
@@ -392,6 +390,7 @@ local function clone(plugin, update_task, timeout)
   })
 end
 
+--- @async
 --- If `path` is a link, remove it if the destination does not exist.
 --- @param path string
 local function sanitize_path(path)
@@ -415,14 +414,19 @@ local function sanitize_path(path)
   a.wait(2, uv.fs_unlink, path)
 end
 
+--- @async
 --- @param plugin Pckr.Plugin
---- @param disp Pckr.Display
+--- @param disp? Pckr.Display
 --- @return boolean?, string
 local function install(plugin, disp)
   --- @param msg string
   --- @param info? string[]
   local function update_task(msg, info)
-    disp:task_update(plugin.name, msg, info)
+    if disp then
+      vim.schedule(function()
+        disp:task_update(plugin.name, msg, info)
+      end)
+    end
   end
 
   sanitize_path(plugin.install_path)
@@ -442,9 +446,9 @@ end
 
 --- @async
 --- @param plugin Pckr.Plugin
---- @param disp Pckr.Display
+--- @param disp? Pckr.Display
 --- @return string?
-M.installer = function(plugin, disp)
+function M.installer(plugin, disp)
   local ok, out = install(plugin, disp)
 
   if ok then
@@ -465,79 +469,101 @@ local function log_err(plugin, msg, x)
   log.fmt_debug('%s: $s: %s', plugin.name, msg, x1)
 end
 
+--- @async
 --- @param plugin Pckr.Plugin
---- @param disp Pckr.Display
---- @param ff_only? boolean
+--- @param disp? Pckr.Display
+--- @param opts? table<string,any>
 --- @return boolean, string?
-local function update(plugin, disp, ff_only)
-  disp:task_update(plugin.name, 'checking current commit...')
+local function update(plugin, disp, opts)
+  --- @param msg string
+  --- @param info? string[]
+  local function update_task(msg, info)
+    if disp then
+      a.schedule()
+      disp:task_update(plugin.name, msg, info)
+    end
+  end
 
+  update_task('checking current commit...')
   plugin.revs[1] = get_head(plugin.install_path)
 
-  local function update_task(msg, info)
-    disp:task_update(plugin.name, msg, info)
-  end
-
-  update_task('fetching updates...')
-  local ok, out = git_run({
-    'fetch',
-    '--tags',
-    '--force',
-    '--update-shallow',
-    '--progress',
-  }, {
-    cwd = plugin.install_path,
-    on_stderr = function(chunk)
-      update_task('fetching updates...', process_progress(chunk))
-    end,
-  })
-  if not ok then
-    return false, out
-  end
-
-  update_task('pulling updates...')
-
-  if ff_only then
-    ok, out = git_run({ 'merge', '--ff-only', '--progress' }, {
-      cwd = plugin.install_path,
-      on_stderr = function(chunk)
-        update_task('fast forwarding...', process_progress(chunk))
-      end,
-    })
-  else
-    ok, out = checkout(plugin, update_task)
-  end
-
-  if not ok then
-    log_err(plugin, 'failed update', out)
-    return false, out
-  end
-
-  plugin.revs[2] = get_head(plugin.install_path)
-
-  if plugin.revs[1] ~= plugin.revs[2] then
-    update_task('getting commit messages...')
-    ok, out = git_run({
-      'log',
-      '--color=never',
-      '--pretty=format:%h %s (%cr)',
-      '--no-show-signature',
-      fmt('%s...%s', plugin.revs[1], plugin.revs[2]),
+  do -- fetch updates
+    update_task('fetching updates...')
+    local ok, out = git_run({
+      'fetch',
+      '--tags',
+      '--force',
+      '--update-shallow',
+      '--progress',
     }, {
       cwd = plugin.install_path,
+      on_stderr = function(chunk)
+        update_task('fetching updates...', process_progress(chunk))
+      end,
     })
-
     if not ok then
-      log_err(plugin, 'failed getting commit messages', out)
       return false, out
     end
+  end
 
-    local out2 --- @type string
-    ok, out2 = mark_breaking_changes(plugin, disp)
-    if not ok then
-      log_err(plugin, 'failed marking breaking changes', out2)
-      return false, out2
+  if not opts or not opts.check then -- pull updates
+    update_task('pulling updates...')
+    local ok, out --- @type boolean, string?
+
+    if opts and opts.ff_only then
+      ok, out = git_run({ 'merge', '--ff-only', '--progress' }, {
+        cwd = plugin.install_path,
+        on_stderr = function(chunk)
+          update_task('fast forwarding...', process_progress(chunk))
+        end,
+      })
+    else
+      ok, out = checkout(plugin, update_task)
     end
+
+    if not ok then
+      log_err(plugin, 'failed update', out)
+      return false, out
+    end
+  end
+
+  if opts and opts.check then
+    local ok, out = git_run({'rev-parse', '@{upstream}'}, { cwd = plugin.install_path })
+    if not ok then
+      log_err(plugin, 'failed rev-parse', out)
+      return false, out
+    end
+    plugin.revs[2] = assert(out:gsub('%s', ''))
+  else
+    plugin.revs[2] = get_head(plugin.install_path)
+  end
+
+  if plugin.revs[1] == plugin.revs[2] then
+    return true
+  end
+
+  update_task('getting commit messages...')
+  local ok, out = git_run({
+    'log',
+    '--color=never',
+    '--pretty=format:%h %s (%cr)',
+    '--no-show-signature',
+    fmt('%s...%s', plugin.revs[1], plugin.revs[2]),
+  }, {
+    cwd = plugin.install_path,
+  })
+
+  if not ok then
+    log_err(plugin, 'failed getting commit messages', out)
+    return false, out
+  end
+
+  update_task('checking for breaking changes...')
+  local out2 --- @type string
+  ok, out2 = mark_breaking_changes(plugin)
+  if not ok then
+    log_err(plugin, 'failed marking breaking changes', out2)
+    return false, out2
   end
 
   return true, out
@@ -545,11 +571,11 @@ end
 
 --- @async
 --- @param plugin Pckr.Plugin
---- @param disp Pckr.Display
---- @param ff_only? boolean
+--- @param disp? Pckr.Display
+--- @param opts? table<string,any>
 --- @return string?
-M.updater = function(plugin, disp, ff_only)
-  local ok, out = update(plugin, disp, ff_only)
+function M.updater(plugin, disp, opts)
+  local ok, out = update(plugin, disp, opts)
   if not ok then
     plugin.err = out
     return out
@@ -557,9 +583,10 @@ M.updater = function(plugin, disp, ff_only)
   plugin.messages = out
 end
 
+--- @async
 --- @param plugin Pckr.Plugin
 --- @return string?
-M.remote_url = async(1, function(plugin)
+function M.remote_url(plugin)
   local ok, out = git_run({ 'remote', 'get-url', 'origin' }, {
     cwd = plugin.install_path,
   })
@@ -567,12 +594,13 @@ M.remote_url = async(1, function(plugin)
   if ok then
     return out[1]
   end
-end)
+end
 
+--- @async
 --- @param plugin Pckr.Plugin
 --- @param commit string
---- @param callback fun(_: string?, _: string?)
-M.diff = async(3, function(plugin, commit, callback)
+--- @return string?, string?
+function M.diff(plugin, commit)
   local ok, out = git_run({
     'show',
     '--no-color',
@@ -582,16 +610,16 @@ M.diff = async(3, function(plugin, commit, callback)
     cwd = plugin.install_path,
   })
 
-  if ok then
-    callback(out)
-  else
-    callback(nil, out)
+  if not ok then
+    return nil, out
   end
-end)
+  return out
+end
 
+--- @async
 --- @param plugin Pckr.Plugin
 --- @return string?
-M.revert_last = async(1, function(plugin)
+function M.revert_last(plugin)
   local ok, out = git_run({ 'reset', '--hard', 'HEAD@{1}' }, {
     cwd = plugin.install_path,
   })
@@ -608,13 +636,14 @@ M.revert_last = async(1, function(plugin)
   end
 
   log.fmt_info('Reverted update for %s', plugin.name)
-end)
+end
 
+--- @async
 --- Reset the plugin to `commit`
 --- @param plugin Pckr.Plugin
 --- @param commit string
 --- @return string?
-M.revert_to = async(2, function(plugin, commit)
+function M.revert_to(plugin, commit)
   assert(type(commit) == 'string', fmt("commit: string expected but '%s' provided", type(commit)))
   log.fmt_debug("Reverting '%s' to commit '%s'", plugin.name, commit)
   local ok, out = git_run({ 'reset', '--hard', commit, '--' }, {
@@ -624,13 +653,14 @@ M.revert_to = async(2, function(plugin, commit)
   if not ok then
     return out
   end
-end)
+end
 
+--- @async
 --- Returns HEAD's short hash
 --- @param plugin Pckr.Plugin
 --- @return string?
-M.get_rev = async(1, function(plugin)
+function M.get_rev(plugin)
   return get_head(plugin.install_path)
-end)
+end
 
 return M
