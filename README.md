@@ -170,7 +170,7 @@ The default configuration values (and structure of the configuration table) are:
 
 ```lua
 require('pckr').setup{
-  package_root        = util.join_paths(vim.fn.stdpath('data'), 'site', 'pack'),
+  pack_dir            = util.join_paths(vim.fn.stdpath('data'), 'site'),
   max_jobs            = nil, -- Limit the number of simultaneous jobs. nil means no limit
   autoremove          = false, -- Remove unused plugins
   autoinstall         = true, -- Auto install plugins

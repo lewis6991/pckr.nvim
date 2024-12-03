@@ -154,7 +154,7 @@ CONFIGURATION                                              *pckr-configuration*
 structure of the `config` table expected by `startup` or `init`, with their
 default values: >lua
   {
-    package_root   = util.join_paths(vim.fn.stdpath('data'), 'site', 'pack'),
+    pack_dir = util.join_paths(vim.fn.stdpath('data'), 'site'),
     max_jobs = nil, -- Limit the number of simultaneous jobs. nil means no limit
     git = {
       cmd                = 'git', -- The base command for git operations
