@@ -63,7 +63,7 @@ end)
 --- @param _ any
 --- @param _opts table?
 --- @param __cb? function
-M.restore = async.sync(2 ,function(_, _opts, __cb)
+M.restore = async.sync(2, function(_, _opts, __cb)
   require('pckr.lockfile').restore()
 end)
 

@@ -41,7 +41,7 @@ local function find_extra_plugins(plugins)
 
   for dir, dir_is_start in pairs({
     [config._opt_dir] = false,
-    [config._start_dir] = true
+    [config._start_dir] = true,
   }) do
     for name, ty in vim.fs.dir(dir) do
       if ty ~= 'file' then
@@ -247,15 +247,15 @@ local update_task = async.sync(2, function(plugin, disp, __cb)
   local info = {} --- @type string[]
   local ncommits = 0
   if plugin.messages then
-    info[#info+1] = 'Commits:'
+    info[#info + 1] = 'Commits:'
     for _, m in ipairs(vim.split(plugin.messages, '\n')) do
       for _, line in ipairs(vim.split(m, '\n')) do
-        info[#info+1] = '    ' .. line
+        info[#info + 1] = '    ' .. line
         ncommits = ncommits + 1
       end
     end
 
-    info[#info+1] = ''
+    info[#info + 1] = ''
   end
 
   disp:task_succeeded(plugin.name, fmt('updated: %d new commits', ncommits), info)

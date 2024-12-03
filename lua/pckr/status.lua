@@ -22,7 +22,7 @@ local function format_values(key, value)
   elseif key == 'err' or key == 'messages' then
     local r = {} --- @type string[]
     for _, v in ipairs(vim.split(value, '\n')) do
-      r[#r + 1] = '  | '.. v
+      r[#r + 1] = '  | ' .. v
     end
     return r
   elseif key == 'url' then
@@ -142,7 +142,7 @@ local function get_update_state(plugin)
 
   local plugin_type = require('pckr.plugin_types')[plugin.type]
 
-  plugin.err = plugin_type.updater(plugin, nil, {check=true})
+  plugin.err = plugin_type.updater(plugin, nil, { check = true })
 
   async.main()
 
@@ -217,14 +217,17 @@ function M.run()
   disp:task_done('pckr.nvim', fmt('(%.2fms)', pckr_time), pckr_info(total_plugin_time))
 
   for _, plugin in pairs(plugins_by_name) do
-      if plugin.loaded and plugin.total_time then
-        plugin._profile = fmt('(%.2fms)', plugin.total_time)
-      end
+    if plugin.loaded and plugin.total_time then
+      plugin._profile = fmt('(%.2fms)', plugin.total_time)
+    end
 
-      local state = table.concat(tbl_flatten({
+    local state = table.concat(
+      tbl_flatten({
         get_load_state(plugin),
         plugin._profile,
-      }), ' ')
+      }),
+      ' '
+    )
 
     disp:task_done(plugin.name, state, get_task_status(plugin))
   end
@@ -242,11 +245,14 @@ function M.run()
   local tasks = {} --- @type (fun(function))[]
   for _, plugin in pairs(plugins_by_name) do
     tasks[#tasks + 1] = async.sync(0, function()
-      local state = table.concat(tbl_flatten({
-        get_load_state(plugin),
-        plugin._profile,
-        get_update_state(plugin),
-      }), ' ')
+      local state = table.concat(
+        tbl_flatten({
+          get_load_state(plugin),
+          plugin._profile,
+          get_update_state(plugin),
+        }),
+        ' '
+      )
 
       disp:task_done(plugin.name, state)
     end)
@@ -262,7 +268,9 @@ function M.run()
     return disp:check()
   end, tasks)
 
-  disp:update_headline_message(fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins_by_name), pckr_time))
+  disp:update_headline_message(
+    fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins_by_name), pckr_time)
+  )
 end
 
 return M
