@@ -163,8 +163,9 @@ local function packadd(plugin, bang)
     return
   end
 
-  if vim.v.vim_did_enter == 0 and bang then
-    -- Do not source. We've already added to rtp, so no need to do anything.
+  -- Use vim.g.loaded_pckr as a signal for when plugin/* is loaded.
+  if not vim.g.loaded_pckr and bang then
+    -- Do not load plugin/* as that will be done by 'loadplugins' later.
     return
   end
 
