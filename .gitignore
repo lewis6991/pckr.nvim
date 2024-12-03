@@ -4,3 +4,7 @@ nvim-test
 
 luacov.report.out
 luacov.stats.out
+
+stylua
+luals
+luals_check
