@@ -1,3 +1,8 @@
+if vim.g.loaded_pckr then
+  return
+end
+
+vim.g.loaded_pckr = true
 
 vim.api.nvim_create_user_command(
   'Pckr',
