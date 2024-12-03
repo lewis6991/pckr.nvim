@@ -116,12 +116,14 @@ local function source_runtime(...)
 end
 
 --- This does the same as runtime.c:add_pack_dir_to_rtp()
---- - find first after
---- - insert `path` right before first after or at the end
+--- - find packpath dir and first after dir
+--- - insert `path` right after the packpath dir,
+---   before first after or at the end
 --- - insert after dir right before first after or at the end
 --- @param path string
 local function add_to_rtp(path)
-  local idx_dir --- @type integer?
+  local idx_after_dir --- @type integer?
+  local idx_pack_dir --- @type integer?
 
   --- @type string[]
   --- @diagnostic disable-next-line:undefined-field
@@ -131,19 +133,21 @@ local function add_to_rtp(path)
     if util.is_windows then
       p = vim.fs.normalize(p)
     end
-    if vim.endswith(p, '/after') then
-      idx_dir = i
+    if p == config.pack_dir then
+      idx_pack_dir = i + 1
+    elseif vim.endswith(p, '/after') then
+      idx_after_dir = i
       break
     end
   end
 
-  idx_dir = idx_dir or #rtp + 1
+  idx_after_dir = idx_after_dir or #rtp + 1
 
-  table.insert(rtp, idx_dir, path)
+  table.insert(rtp, idx_pack_dir or idx_after_dir, path)
 
   local after = path .. '/after'
   if uv.fs_stat(after) then
-    table.insert(rtp, idx_dir + 1, after)
+    table.insert(rtp, idx_after_dir + 1, after)
   end
 
   vim.opt.runtimepath = rtp

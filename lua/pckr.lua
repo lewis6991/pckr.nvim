@@ -20,6 +20,7 @@ local function setup(user_config)
     -- We will handle loading of all plugins so minimise packpath
     vim.go.packpath = vim.env.VIMRUNTIME
   end
+  vim.go.packpath = ('%s,%s'):format(config.pack_dir, vim.go.packpath)
 
   for _, dir in ipairs({ config._opt_dir, config._start_dir }) do
     if vim.fn.isdirectory(dir) == 0 then

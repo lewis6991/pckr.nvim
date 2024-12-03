@@ -26,7 +26,9 @@ local join_paths = util.join_paths
 --- @field path string
 
 --- @class (exact) Pckr.UserConfig
---- @field package_root? string
+--- @field pack_dir?     string
+--- @field package_root? string deprecated, use pack_dir
+---
 --- @field max_jobs?     integer
 --- @field autoremove?   boolean
 --- @field autoinstall?  boolean
@@ -36,7 +38,7 @@ local join_paths = util.join_paths
 --- @field lockfile?     Pckr.Config.Lockfile
 
 --- @class (exact) Pckr.Config : Pckr.UserConfig
---- @field package_root string
+--- @field pack_dir     string
 --- @field autoremove   boolean
 --- @field autoinstall  boolean
 --- @field display      Pckr.Config.Display
@@ -52,7 +54,7 @@ local join_paths = util.join_paths
 
 --- @type Pckr.Config
 local config = {
-  package_root = join_paths(vim.fn.stdpath('data') --[[@as string]], 'site', 'pack'),
+  pack_dir = join_paths(vim.fn.stdpath('data') --[[@as string]], 'site'),
   _pack_dir = '',
   _start_dir = '',
   _opt_dir = '',
@@ -95,12 +97,13 @@ local config = {
 local function set(_, user_config)
   if user_config then
     config = vim.tbl_deep_extend('force', config, user_config)
+    config.pack_dir = user_config.pack_dir or user_config.package_root or config.pack_dir
   end
 
-  config.package_root = vim.fn.fnamemodify(config.package_root, ':p')
-  config.package_root = config.package_root:gsub(util.get_separator() .. '$', '', 1)
+  config.pack_dir = vim.fn.fnamemodify(config.pack_dir, ':p')
+  config.pack_dir = config.pack_dir:gsub(util.get_separator() .. '$', '', 1)
 
-  local pack_dir = join_paths(config.package_root, 'pckr')
+  local pack_dir = join_paths(config.pack_dir, 'pack', 'pckr')
   config._opt_dir = join_paths(pack_dir, 'opt')
   config._start_dir = join_paths(pack_dir, 'start')
 
