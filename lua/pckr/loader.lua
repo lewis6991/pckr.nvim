@@ -189,7 +189,8 @@ local function packadd(plugin, bang)
 end
 
 --- @param plugin Pckr.Plugin
-function M.load_plugin(plugin)
+--- @param load_plugin_star? boolean
+function M.load_plugin(plugin, load_plugin_star)
   local plugin_name = plugin.name
 
   if plugin.loaded then
@@ -218,13 +219,13 @@ function M.load_plugin(plugin)
     fmt_debug('Loading dependencies of %s', plugin_name)
     for _, name in ipairs(plugin.requires) do
       local all_plugins = require('pckr.plugin').plugins_by_name
-      M.load_plugin(all_plugins[name])
+      M.load_plugin(all_plugins[name], load_plugin_star)
     end
   end
 
   fmt_debug('Loading %s', plugin_name)
   measure('packadd', function()
-    packadd(plugin, true)
+    packadd(plugin, not load_plugin_star)
   end)
 
   apply_config(plugin, 'config')

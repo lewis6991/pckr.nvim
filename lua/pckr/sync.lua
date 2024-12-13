@@ -133,7 +133,7 @@ local function post_update_hook(plugin, disp)
   if plugin.run or plugin.start then
     async.schedule()
     local loader = require('pckr.loader')
-    loader.load_plugin(plugin)
+    loader.load_plugin(plugin, true)
   end
 
   if not plugin.run then
