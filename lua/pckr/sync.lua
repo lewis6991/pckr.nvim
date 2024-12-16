@@ -9,6 +9,7 @@ local util = require('pckr.util')
 
 local display = require('pckr.display')
 
+--- @class Pckr.sync
 local M = {}
 
 --- @return Pckr.Display
@@ -318,10 +319,13 @@ local function get_pckr_spec()
 
   return {
     name = 'pckr.nvim',
+    url = 'https://github.com/lewis6991/pckr.nvim.git',
     install_path = pckr_loc,
     type = 'local',
     revs = {},
     _dir = pckr_loc,
+    _dep_only = false,
+    simple = true,
   }
 end
 

@@ -7,6 +7,7 @@ local P = require('pckr.plugin')
 local plugin_types = require('pckr.plugin_types')
 local display = require('pckr.display')
 
+--- @class Pckr.lockfile
 local M = {}
 
 -- TODO(lewis6991): copied from actions.tl - consolidate

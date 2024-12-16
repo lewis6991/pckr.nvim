@@ -10,6 +10,7 @@ local config = require('pckr.config')
 
 local orig_loadfile = loadfile
 
+--- @class Pckr.loader
 local M = {
   --- @type table<string,{[1]:number,[2]:number}>
   path_times = {},
@@ -71,7 +72,7 @@ local function walk(path, fn)
     end
     local child = util.join_paths(path, name)
     if t == 'directory' then
-      M.walk(child, fn)
+      walk(child, fn)
     end
     fn(child, name, t)
   end

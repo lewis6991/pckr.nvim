@@ -3,6 +3,7 @@ local async = require('pckr.async')
 local log = require('pckr.log')
 local display = require('pckr.display')
 
+--- @class Pckr.status
 local M = {}
 
 ---format a configuration value of unknown type into a string or list of strings
@@ -144,7 +145,7 @@ local function get_update_state(plugin)
 
   plugin.err = plugin_type.updater(plugin, nil, { check = true })
 
-  async.main()
+  async.schedule()
 
   if plugin.err then
     return 'failed to check for updates'

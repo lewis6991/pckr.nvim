@@ -537,8 +537,7 @@ end
 
 local in_headless = #api.nvim_list_uis() == 0
 
---- @type Pckr.Display
-local display = setmetatable({}, { __index = Display })
+local display = setmetatable({}, { __index = Display }) --[[@as Pckr.Display]]
 
 display.interactive = not config.display.non_interactive and not in_headless
 
@@ -874,6 +873,7 @@ local function setup_display(bufnr, winid)
   end
 end
 
+--- @class Pckr.display
 local M = {}
 
 --- Utility function to prompt a user with a question in a floating window

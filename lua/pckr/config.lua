@@ -114,12 +114,11 @@ local function set(_, user_config)
   return config
 end
 
---- @type Pckr.Config
 local M = setmetatable({}, {
   __index = function(_, k)
-    return (config)[k]
+    return config[k]
   end,
   __call = set,
-})
+}) --[[@as Pckr.Config]]
 
 return M

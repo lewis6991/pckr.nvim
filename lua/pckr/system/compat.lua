@@ -32,6 +32,7 @@ local SystemObj = {}
 --- @param state vim.SystemState
 --- @return vim.SystemObj
 local function new_systemobj(state)
+  --- @diagnostic disable-next-line: return-type-mismatch
   return setmetatable({
     pid = state.pid,
     _state = state,

@@ -3,6 +3,7 @@ local a = require('pckr.async')
 local log = require('pckr.log')
 local system = require('pckr.system')
 
+--- @class Pckr.jobs
 local M = {}
 
 --- Main exposed function for the jobs module. Takes a task and options and returns an async

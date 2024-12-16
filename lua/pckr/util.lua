@@ -1,5 +1,6 @@
 local uv = vim.uv or vim.loop
 
+--- @class Pckr.util
 local M = {}
 
 -- TODO(lewis6991): use vim.loop.os_uname().sysname

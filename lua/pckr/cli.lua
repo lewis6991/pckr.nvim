@@ -1,5 +1,6 @@
 local log = require('pckr.log')
 
+--- @class Pckr.cli
 local M = {}
 
 --- @param lead string

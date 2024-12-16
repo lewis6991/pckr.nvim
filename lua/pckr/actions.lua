@@ -1,5 +1,6 @@
 local async = require('pckr.async')
 
+--- @class Pckr.actions
 local M = {}
 
 --- Install operation:

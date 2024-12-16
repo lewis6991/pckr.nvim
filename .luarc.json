@@ -1,37 +1,42 @@
 {
-    "$schema": "https://raw.githubusercontent.com/luals/vscode-lua/master/setting/schema.json",
-    "runtime": {
-        "version": "LuaJIT"
+  "$schema": "https://raw.githubusercontent.com/luals/vscode-lua/master/setting/schema.json",
+  "runtime": {
+    "version": "LuaJIT"
+  },
+  "workspace": {
+    "library": [
+      "$VIMRUNTIME",
+      "nvim-test",
+      "${3rd}/luv/library",
+      "${3rd}/luassert/library",
+      "${3rd}/busted/library"
+    ],
+    "checkThirdParty": false
+  },
+  "diagnostics": {
+    "libraryFiles": "Disable",
+    "groupFileStatus": {
+      "ambiguity": "Opened",
+      "await": "None",
+      "codestyle": "None",
+      "conventions": "Opened",
+      "duplicate": "Opened",
+      "global": "Opened",
+      "luadoc": "Opened",
+      "redefined": "Opened",
+      "strict": "Opened",
+      "strong": "Opened",
+      "type-check": "Opened",
+      "unbalanced": "Opened",
+      "unused": "Opened"
     },
-    "workspace": {
-        "library": [
-            "$VIMRUNTIME",
-            "nvim-test",
-            "${3rd}/luv/library",
-            "${3rd}/luassert/library",
-            "${3rd}/busted/library"
-        ],
-        "checkThirdParty": false
+    "groupSeverity": {
+      "strong": "Warning",
+      "strict": "Warning"
     },
-    "diagnostics": {
-      "groupFileStatus": {
-        "ambiguity": "Opened",
-        "await": "None",
-        "codestyle": "None",
-        "duplicate": "Opened",
-        "global": "Opened",
-        "luadoc": "Opened",
-        "redefined": "Opened",
-        "strict": "Opened",
-        "strong": "Opened",
-        "type-check": "Opened",
-        "unbalanced": "Opened",
-        "unused": "Opened"
-      },
-      "groupSeverity": {
-        "strong": "Warning",
-        "strict": "Warning"
-      },
-      "unusedLocalExclude": [ "_*" ]
-    }
+    "unusedLocalExclude": [ "_*" ]
+  },
+  "type": {
+    "checkTableShape": true
+  }
 }

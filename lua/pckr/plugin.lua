@@ -63,6 +63,7 @@ local config = require('pckr.config')
 
 --- @alias Pckr.PluginType 'git' | 'local'
 
+--- @class Pckr.plugin
 local M = {
   --- @type Pckr.Plugin[]
   plugins = {},
@@ -148,9 +149,12 @@ local function spec_is_list(x)
     return true
   end
 
-  if #x == 1 and type(x[1]) == 'string' and is_simple(x) then
-    -- type(x) == Pckr.UserSpec
-    return false
+  if #x == 1 and type(x[1]) == 'string' then
+    x = x --[[@as Pckr.UserSpec]]
+    if is_simple(x) then
+      -- type(x) == Pckr.UserSpec
+      return false
+    end
   end
 
   return true

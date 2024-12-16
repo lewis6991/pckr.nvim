@@ -62,6 +62,7 @@ local function run(func, callback, ...)
   step(...)
 end
 
+--- @class Pckr.async
 local M = {}
 
 --- @param argc integer
