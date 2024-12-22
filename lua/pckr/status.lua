@@ -264,10 +264,9 @@ function M.run()
 
   disp:update_headline_message(fmt('Checking for updates %d / %d plugins', #tasks, #tasks))
 
-  --- @type {[1]: string?, [2]: string?}[]
-  async.join(limit, function()
+  async.join(limit, tasks, function()
     return disp:check()
-  end, tasks)
+  end)
 
   disp:update_headline_message(
     fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins_by_name), pckr_time)

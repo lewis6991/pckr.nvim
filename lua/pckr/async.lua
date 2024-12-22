@@ -96,9 +96,10 @@ function M.wait(argc, func, ...)
 end
 
 --- Creates an async function with a callback style function.
+--- @generic F: function
 --- @param argc integer
---- @param func function
---- @return function
+--- @param func F
+--- @return F
 function M.wrap(argc, func)
   assert(type(argc) == 'number')
   assert(type(func) == 'function')
@@ -122,19 +123,22 @@ function M.sync(nargs, func)
   end
 end
 
+--- @async
 --- @generic R
 --- @param n integer Mx number of jobs to run concurrently
 --- @param thunks (fun(cb: function): R)[]
---- @param interrupt_check fun()?
---- @param callback fun(ret: R[][])
+--- @param interrupt_check (fun(): boolean?)?
+--- @param callback? fun(ret: R[][])
+--- @return any[][]
 M.join = M.wrap(4, function(n, thunks, interrupt_check, callback)
+  --- @cast callback -?
   n = math.min(n, #thunks)
 
   local ret = {} --- @type any[][]
 
   if #thunks == 0 then
     callback(ret)
-    return
+    return ret
   end
 
   local remaining = { unpack(thunks, n + 1) }
@@ -156,6 +160,8 @@ M.join = M.wrap(4, function(n, thunks, interrupt_check, callback)
   for i = 1, n do
     thunks[i](cb)
   end
+
+  return ret
 end)
 
 ---Useful for partially applying arguments to an async function
@@ -177,6 +183,7 @@ end
 
 ---An async function that when called will yield to the Neovim scheduler to be
 ---able to call the API.
+--- @type fun()
 M.schedule = M.wrap(1, vim.schedule)
 
 return M
