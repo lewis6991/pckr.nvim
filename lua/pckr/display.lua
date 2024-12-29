@@ -313,6 +313,12 @@ local MAX_COL = 10000
 --- @param message {[1]: string, [2]:string?}[][]
 --- @param pos? Pckr.TaskPos
 function Display:update_task_lines(plugin, message, pos)
+  if not self.buf then
+    return
+  end
+  if vim.fn.bufwinnr(self.buf) == -1 then
+    return
+  end
   local item = self.items[plugin]
 
   -- If pos is given, task will be rendered at the top or bottom of the buffer.
