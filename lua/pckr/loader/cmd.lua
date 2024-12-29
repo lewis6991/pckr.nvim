@@ -19,6 +19,7 @@ return function(cmd)
     end, {
       bang = true,
       nargs = '*',
+      range = true,
       complete = function(_arg_lead, cmd_line, _cursor_pos)
         vim.api.nvim_del_user_command(cmd)
         loader()
