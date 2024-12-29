@@ -145,7 +145,7 @@ local function set_lines(buf, srow, erow, text)
   if not buf then
     return
   end
-  if vim.fn.bufwinid(buf) == -1 then
+  if vim.fn.bufwinnr(buf) == -1 then
     return
   end
   text = assert(normalize_lines(text))
@@ -737,7 +737,7 @@ function Display:update_headline_message(message)
   if not self.buf then
     return
   end
-  if vim.fn.bufwinid(self.buf) == -1 then
+  if vim.fn.bufwinnr(self.buf) == -1 then
     return
   end
   --- @type string
