@@ -384,11 +384,16 @@ function M.sync(op, plugins)
 
   --- @type string[], string[]
   local to_install, to_update = {}, {}
-  for _, plugin in pairs(pckr_plugins) do
-    if plugin.installed then
-      to_update[#to_update + 1] = plugin.name
+  for _, plugin_name in pairs(plugins) do
+    local plugin = pckr_plugins[plugin_name]
+    if plugin then
+      if plugin.installed then
+        to_update[#to_update + 1] = plugin.name
+      else
+        to_install[#to_install + 1] = plugin.name
+      end
     else
-      to_install[#to_install + 1] = plugin.name
+      log.warn('Ignore non-existent plugin:', plugin_name)
     end
   end
 
