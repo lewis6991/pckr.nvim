@@ -332,9 +332,9 @@ function Display:update_task_lines(plugin, message, pos)
     item.mark = api.nvim_buf_set_extmark(self.buf, ns, new_row, 0, {})
   end
 
-  local srow, erow = self:get_task_region(plugin);
+  local srow, erow = self:get_task_region(plugin)
   if srow == nil or erow == nil then
-	  return
+    return
   end
 
   local lines = {} --- @type string[]
