@@ -145,6 +145,9 @@ local function set_lines(buf, srow, erow, text)
   if not buf then
     return
   end
+  if vim.fn.bufwinnr(buf) == -1 then
+    return
+  end
   text = assert(normalize_lines(text))
   vim.bo[buf].modifiable = true
   api.nvim_buf_set_lines(buf, srow, erow, true, text)
@@ -262,6 +265,9 @@ function Display:get_task_region(name)
     return
   end
 
+  if vim.fn.bufwinnr(self.buf) == -1 then
+    return
+  end
   local info = api.nvim_buf_get_extmark_by_id(self.buf, ns, mark, { details = true })
 
   --- @type integer, integer?
@@ -307,6 +313,12 @@ local MAX_COL = 10000
 --- @param message {[1]: string, [2]:string?}[][]
 --- @param pos? Pckr.TaskPos
 function Display:update_task_lines(plugin, message, pos)
+  if not self.buf then
+    return
+  end
+  if vim.fn.bufwinnr(self.buf) == -1 then
+    return
+  end
   local item = self.items[plugin]
 
   -- If pos is given, task will be rendered at the top or bottom of the buffer.
@@ -320,7 +332,10 @@ function Display:update_task_lines(plugin, message, pos)
     item.mark = api.nvim_buf_set_extmark(self.buf, ns, new_row, 0, {})
   end
 
-  local srow, erow = assert(self:get_task_region(plugin))
+  local srow, erow = self:get_task_region(plugin)
+  if srow == nil or erow == nil then
+    return
+  end
 
   local lines = {} --- @type string[]
   for _, l in ipairs(message) do
@@ -618,6 +633,9 @@ local function decrement_headline_count(disp)
   if not disp.buf then
     return
   end
+  if vim.fn.bufwinnr(disp.buf) == -1 then
+    return
+  end
   local headline = api.nvim_buf_get_lines(disp.buf, 0, 1, false)[1]
   local count_start, count_end = headline:find('%d+')
   if count_start then
@@ -723,6 +741,9 @@ end
 --- @param message string
 function Display:update_headline_message(message)
   if not self.buf then
+    return
+  end
+  if vim.fn.bufwinnr(self.buf) == -1 then
     return
   end
   --- @type string
