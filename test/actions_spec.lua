@@ -48,14 +48,17 @@ describe('pckr actions', function()
     local foo_plugin_dir = tmpdir .. '/foo_plugin'
 
     helpers.fn.system({ 'mkdir', foo_plugin_dir })
-    helpers.fn.system({ 'mkdir', foo_plugin_dir..'/plugin' })
+    helpers.fn.system({ 'mkdir', foo_plugin_dir .. '/plugin' })
 
-    write_file(foo_plugin_dir..'/plugin/foo.lua', {
-      '_G.loaded_plugin_foo = true'
+    write_file(foo_plugin_dir .. '/plugin/foo.lua', {
+      '_G.loaded_plugin_foo = true',
     })
 
     local init_lua = tmpdir .. '/init.lua'
-    write_file(init_lua, string.format([[
+    write_file(
+      init_lua,
+      string.format(
+        [[
       -- Make pckr available
       vim.opt.rtp:append('.')
 
@@ -73,20 +76,22 @@ describe('pckr actions', function()
           end,
         }
       })
-    ]], tmpdir, foo_plugin_dir))
+    ]],
+        tmpdir,
+        foo_plugin_dir
+      )
+    )
 
     helpers.clear(init_lua)
 
-    wait_for_file(tmpdir..'/pack/pckr/opt/foo_plugin')
+    wait_for_file(tmpdir .. '/pack/pckr/opt/foo_plugin')
 
-    local install_dir = tmpdir..'/pack/pckr/opt/foo_plugin'
+    local install_dir = tmpdir .. '/pack/pckr/opt/foo_plugin'
 
     eq('link', uv.fs_lstat(install_dir).type)
-    eq('file', uv.fs_stat(install_dir..'/plugin/foo.lua').type)
+    eq('file', uv.fs_stat(install_dir .. '/plugin/foo.lua').type)
 
-    eq(true, exec_lua[[return _G.did_run_pre]])
-    eq(true, exec_lua[[return _G.did_run_post]])
+    eq(true, exec_lua([[return _G.did_run_pre]]))
+    eq(true, exec_lua([[return _G.did_run_post]]))
   end)
-
 end)
-
