@@ -331,10 +331,24 @@ end
 
 --- @async
 --- Find and remove any plugins not currently configured for use
-function M.clean()
+--- @param plugins? string[]
+function M.clean(plugins)
   log.debug('Starting clean')
 
-  local to_remove = find_extra_plugins(pckr_plugins)
+  local to_remove --- @type table<string,string>
+
+  if plugins then
+    to_remove = {} --- @type table<string,string>
+    for _, p in ipairs(plugins) do
+      if pckr_plugins[p] then
+        to_remove[pckr_plugins[p].install_path] = p
+      else
+        log.fmt_error('Unknown plugin: %s', p)
+      end
+    end
+  else
+    to_remove = find_extra_plugins(pckr_plugins)
+  end
 
   log.debug('extra plugins', to_remove)
 
