@@ -528,7 +528,7 @@ local function update(plugin, disp, opts)
   end
 
   if opts and opts.check then
-    local ok, out = git_run({'rev-parse', '@{upstream}'}, { cwd = plugin.install_path })
+    local ok, out = git_run({ 'rev-parse', '@{upstream}' }, { cwd = plugin.install_path })
     if not ok then
       log_err(plugin, 'failed rev-parse', out)
       return false, out

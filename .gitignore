@@ -1,10 +1,6 @@
 doc/tags
 
-nvim-test
+deps
 
 luacov.report.out
 luacov.stats.out
-
-stylua
-luals
-luals_check
