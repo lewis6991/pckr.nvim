@@ -74,12 +74,7 @@ end
 
 function M.run(params)
   --- @type string
-  local func = params.fargs[1]
-
-  if not func then
-    log.error('No subcommand provided')
-  end
-
+  local func = params.fargs[1] or 'status'
   local actions = require('pckr.actions')
 
   --- @type function?

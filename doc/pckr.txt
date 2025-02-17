@@ -98,6 +98,12 @@ Then you can write your plugin specification in Lua, e.g. (in `~/.config/nvim/lu
 
 `pckr` provides the following commands: *pckr-default-commands* *pckr-commands*
 
+`Pckr `                                                            *pckr-command*
+Show Pckr dashboard.
+
+`Pckr status`                                              *pckr-commands-status*
+Show Pckr dashboard.
+
 `Pckr clean`                                                *pckr-commands-clean*
 Remove any disabled or unused plugins.
 
