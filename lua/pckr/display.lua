@@ -1,10 +1,11 @@
 local api = vim.api
+
 local log = require('pckr.log')
 local config = require('pckr.config')
 local awrap = require('pckr.async').wrap
 local pckr_plugins = require('pckr.plugin').plugins_by_name
 
-local ns = api.nvim_create_namespace('pckr_display')
+local ns = api.nvim_create_namespace('pckr.display')
 
 local HEADER_LINES = 2
 
@@ -37,6 +38,7 @@ local TITLE = 'pckr.nvim'
 --- @field callbacks?  Pckr.Display.Callbacks
 local Display = {}
 
+--- @package
 --- @return string?, {[1]:integer, [2]:integer}?
 function Display:get_cursor_task()
   local row = unpack(api.nvim_win_get_cursor(0)) - 1
@@ -91,7 +93,7 @@ local function open_win(inner)
     desc = 'Resize pckr display when Nvim is resized',
     group = augroup,
     callback = function()
-      if not vim.api.nvim_win_is_valid(win) then
+      if not api.nvim_win_is_valid(win) then
         return true
       end
       api.nvim_win_set_config(win, get_win_config(inner))
@@ -155,18 +157,18 @@ local COMMIT_PAT = [[[0-9a-f]\{7,9}]]
 local COMMIT_SINGLE_PAT = string.format([[\<%s\>]], COMMIT_PAT)
 local COMMIT_RANGE_PAT = string.format([[\<%s\.\.%s\>]], COMMIT_PAT, COMMIT_PAT)
 
---- @param disp Pckr.Display
-local function diff(disp)
-  if not disp.buf then
+--- @package
+function Display:diff()
+  if not self:is_valid() then
     return
   end
 
-  if not next(disp.items) then
+  if not next(self.items) then
     log.info('Operations are still running; plugin info is not ready yet')
     return
   end
 
-  local task_name = disp:get_cursor_task()
+  local task_name = self:get_cursor_task()
   if not task_name then
     log.warn('No plugin selected!')
     return
@@ -190,7 +192,7 @@ local function diff(disp)
     return
   end
 
-  disp.callbacks.diff(plugin, commit, function(text, err)
+  self.callbacks.diff(plugin, commit, function(text, err)
     if err then
       log.warn('Unable to get diff!')
       return
@@ -209,13 +211,14 @@ local function diff(disp)
   end)
 end
 
---- @param disp Pckr.Display
-local function goto_file(disp)
-  if not disp.buf then
+--- @package
+--- @param self Pckr.Display
+function Display:goto_file()
+  if not self:is_valid() then
     return
   end
 
-  local plugin_name = disp:get_cursor_task()
+  local plugin_name = self:get_cursor_task()
   if not plugin_name then
     log.warn('No plugin selected!')
     return
@@ -229,7 +232,7 @@ local function goto_file(disp)
   end
 
   local current_line = api.nvim_get_current_line()
-  local col = vim.api.nvim_win_get_cursor(0)[2]
+  local col = api.nvim_win_get_cursor(0)[2]
   local head, tail = current_line:sub(1, col), current_line:sub(col + 1)
   local target = head:match('[^" ]*$') .. tail:match('^[^" ]*') --- @type string
   local lno = target:match(':(%d+)$') --- @type string?
@@ -253,6 +256,13 @@ local function goto_file(disp)
   end
 end
 
+--- @private
+--- @return boolean
+function Display:is_valid()
+  return self.buf ~= nil and api.nvim_buf_is_valid(self.buf)
+end
+
+--- @private
 --- @param name string
 --- @return integer?, integer?
 function Display:get_task_region(name)
@@ -281,12 +291,10 @@ function Display:get_task_region(name)
   return srow, erow + 1
 end
 
+--- @private
 --- @param self Pckr.Display
 --- @param name string
 function Display:clear_task(name)
-  if not self.buf then
-    return
-  end
   local srow, erow = assert(self:get_task_region(name))
   set_lines(self.buf, srow, erow, {})
   local item = self.items[name]
@@ -303,6 +311,7 @@ end
 
 local MAX_COL = 10000
 
+--- @private
 --- @param plugin string
 --- @param message {[1]: string, [2]:string?}[][]
 --- @param pos? Pckr.TaskPos
@@ -369,6 +378,7 @@ local function pad(x)
   return r
 end
 
+--- @private
 --- @param task string
 --- @param static? boolean
 --- @param top? boolean
@@ -411,28 +421,29 @@ function Display:render_task(task, static, top)
   self:update_task_lines(task, lines, pos)
 end
 
+--- @package
 --- Toggle the display of detailed information for a plugin in the final results display
---- @param disp Pckr.Display
-local function toggle_info(disp)
-  if not disp.buf then
+--- @param self Pckr.Display
+function Display:toggle_info()
+  if not self:is_valid() then
     return
   end
 
-  if not next(disp.items) then
+  if not next(self.items) then
     log.info('Operations are still running; plugin info is not ready yet')
     return
   end
 
-  local task_name, cursor_pos = disp:get_cursor_task()
+  local task_name, cursor_pos = self:get_cursor_task()
   if not task_name or not cursor_pos then
     log.warn('No plugin selected!')
     return
   end
 
-  local item = disp.items[task_name]
+  local item = self.items[task_name]
   item.expanded = not item.expanded
-  disp:render_task(task_name, true)
-  api.nvim_win_set_cursor(disp.win, cursor_pos)
+  self:render_task(task_name, true)
+  api.nvim_win_set_cursor(self.win, cursor_pos)
 end
 
 --- @async
@@ -496,19 +507,20 @@ local function prompt_user(headline, body, callback)
   end))
 end
 
+--- @package
 --- Prompt a user to revert the latest update for a plugin
---- @param disp Pckr.Display
-local function prompt_revert(disp)
-  if not disp.buf then
+--- @param self Pckr.Display
+function Display:prompt_revert()
+  if not self:is_valid() then
     return
   end
 
-  if not next(disp.items) then
+  if not next(self.items) then
     log.info('Operations are still running; plugin info is not ready yet')
     return
   end
 
-  local plugin_name = disp:get_cursor_task()
+  local plugin_name = self:get_cursor_task()
   if not plugin_name then
     log.warn('No plugin selected!')
     return
@@ -527,7 +539,7 @@ local function prompt_revert(disp)
         .. '?',
     }, function(ans)
       if ans then
-        disp.callbacks.revert_last(plugin)
+        self.callbacks.revert_last(plugin)
       end
     end)
   else
@@ -562,7 +574,7 @@ local keymaps = {
     action = 'show the diff',
     lhs = 'd',
     rhs = function()
-      diff(display)
+      display:diff()
     end,
   },
 
@@ -570,7 +582,7 @@ local keymaps = {
     action = 'show more info',
     lhs = { 'za', '<CR>' },
     rhs = function()
-      toggle_info(display)
+      display:toggle_info()
     end,
   },
 
@@ -578,7 +590,7 @@ local keymaps = {
     action = 'revert an update',
     lhs = 'r',
     rhs = function()
-      prompt_revert(display)
+      display:prompt_revert()
     end,
   },
 
@@ -586,7 +598,7 @@ local keymaps = {
     action = 'goto file under cursor',
     lhs = 'gf',
     rhs = function()
-      goto_file(display)
+      display:goto_file()
     end,
   },
 }
@@ -612,13 +624,11 @@ function Display:task_start(name, message)
   self:render_task(name, nil, true)
 end
 
+--- @private
 --- Decrement the count of active operations in the headline
---- @param disp Pckr.Display
-local function decrement_headline_count(disp)
-  if not disp.buf then
-    return
-  end
-  local headline = api.nvim_buf_get_lines(disp.buf, 0, 1, false)[1]
+--- @param self Pckr.Display
+function Display:decrement_headline_count()
+  local headline = api.nvim_buf_get_lines(self.buf, 0, 1, false)[1]
   local count_start, count_end = headline:find('%d+')
   if count_start then
     local count = tonumber(headline:sub(count_start, count_end))
@@ -629,7 +639,7 @@ local function decrement_headline_count(disp)
       headline:sub(count_end + 1)
     )
 
-    set_lines(disp.buf, 0, HEADER_LINES - 1, updated_headline)
+    set_lines(self.buf, 0, HEADER_LINES - 1, updated_headline)
   end
 end
 
@@ -639,7 +649,7 @@ end
 --- @param info? string|string[]
 --- @param success? boolean
 function Display:task_done(name, message, info, success)
-  if not self.buf then
+  if not self:is_valid() then
     return
   end
 
@@ -663,12 +673,12 @@ function Display:task_done(name, message, info, success)
   end
 
   self:render_task(name)
-  decrement_headline_count(self)
+  self:decrement_headline_count()
 end
 
 --- @param f fun(p1: string, p2: string): boolean
 function Display:task_sort(f)
-  if not self.buf then
+  if not self:is_valid() then
     return
   end
 
@@ -702,6 +712,9 @@ end
 --- @param message string
 --- @param info? string[]
 function Display:task_update(name, message, info)
+  if not self:is_valid() then
+    return
+  end
   log.fmt_debug('%s: %s', name, message)
   if not self.buf then
     return
@@ -722,7 +735,7 @@ end
 --- Update the text of the headline message
 --- @param message string
 function Display:update_headline_message(message)
-  if not self.buf then
+  if not self:is_valid() then
     return
   end
   --- @type string
@@ -735,7 +748,7 @@ end
 --- Display the final results of an operation
 --- @param time number
 function Display:finish(time)
-  if not self.buf then
+  if not self:is_valid() then
     return
   end
 
