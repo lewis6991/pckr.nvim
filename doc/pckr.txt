@@ -1,4 +1,3 @@
-
 *pckr.nvim*
 
 Author: Lewis Russell <lewis6991@gmail.com>
@@ -308,7 +307,7 @@ install({plugins}, {opts}, {callback})                         *pckr.install()*
       • {opts}  (`table?`) Options (RFU)
       • {callback} (`function`)
 
-uninstall({plugins}, {opts}, {callback})                       *pckr.install()*
+uninstall({plugins}, {opts}, {callback})                       *pckr.uninstall()*
     Uninstall plugins.
 
     Attributes: ~
