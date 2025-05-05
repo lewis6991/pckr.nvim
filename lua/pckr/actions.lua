@@ -63,6 +63,15 @@ M.uninstall = async.sync(2, function(plugins, _opts, __cb)
   require('pckr.sync').clean(plugins or {})
 end)
 
+--- Uninstall operation:
+--- Remove specified plugins.
+--- @param plugins? string[]
+--- @param _opts table?
+--- @param __cb? function
+M.reinstall = async.sync(2, function(plugins, _opts, __cb)
+  require('pckr.sync').sync('reinstall', plugins)
+end)
+
 --- @param _ any
 --- @param _opts table?
 --- @param __cb? function

@@ -74,6 +74,7 @@ local function get_win_config(inner)
     width = width,
     border = inner and 'rounded' or nil,
     height = height,
+    zindex = 40,
     row = (vim.o.lines - height) / 2,
     col = (vim.o.columns - width) / 2,
   }

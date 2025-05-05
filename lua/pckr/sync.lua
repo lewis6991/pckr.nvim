@@ -332,6 +332,7 @@ end
 --- @async
 --- Find and remove any plugins not currently configured for use
 --- @param plugins? string[]
+--- @return table<string,true>? removed_plugins nil is operation was cancelled
 function M.clean(plugins)
   log.debug('Starting clean')
 
@@ -353,8 +354,8 @@ function M.clean(plugins)
   log.debug('extra plugins', to_remove)
 
   if not next(to_remove) then
-    log.info('Already clean!')
-    return
+    log.info('No plugins to remove')
+    return {}
   end
 
   async.schedule()
@@ -372,28 +373,38 @@ function M.clean(plugins)
     return
   end
 
-  for path in pairs(to_remove) do
+  local removed = {} --- @type table<string,true>
+
+  for path, plugin_name in pairs(to_remove) do
     if vim.fn.delete(path, 'rf') == -1 then
+      pckr_plugins[plugin_name].installed = nil
       log.fmt_warn('Could not remove %s', path)
+    else
+      removed[plugin_name] = true
     end
   end
+
+  return removed
 end
 
 --- @async
---- @param op 'sync'|'install'|'update'|'upgrade'|'clean'
+--- @param op 'sync'|'reinstall'|'install'|'update'|'upgrade'|'clean'
 --- @param plugins? string[]
 function M.sync(op, plugins)
   if not plugins or #plugins == 0 then
     plugins = vim.tbl_keys(pckr_plugins)
   end
 
-  local clean = op == 'sync' or op == 'clean'
-  local install = op == 'sync' or op == 'install'
+  local clean = op == 'sync' or op == 'reinstall' or op == 'clean'
+  local install = op == 'sync' or op == 'reinstall' or op == 'install'
   local update = op == 'sync' or op == 'update'
   local upgrade = op == 'sync' or op == 'upgrade'
 
-  if clean then
-    M.clean()
+  local removed = clean and M.clean(plugins) or {}
+
+  if not removed or op == 'reinstall' and #removed == 0 then
+    -- Clean operation was cancelled. Do not do anything else
+    return
   end
 
   --- @type string[], string[]
@@ -401,10 +412,21 @@ function M.sync(op, plugins)
   for _, plugin_name in pairs(plugins) do
     local plugin = pckr_plugins[plugin_name]
     if plugin then
-      if plugin.installed then
+      if update and plugin.installed then
+        if plugin.installed then
+          to_update[#to_update + 1] = plugin.name
+        else
+          log.fmt_debug('Plugin %s is not installed', plugin_name)
+        end
         to_update[#to_update + 1] = plugin.name
-      else
-        to_install[#to_install + 1] = plugin.name
+      elseif install and not plugin.installed and (op ~= 'reinstall' or removed[plugin.name]) then
+        -- If operation is reinstall, do not install if plugin was not successfully
+        -- removed.
+        if plugin.installed then
+          log.fmt_debug('Plugin %s is already installed', plugin_name)
+        else
+          to_install[#to_install + 1] = plugin.name
+        end
       end
     else
       log.warn('Ignore non-existent plugin:', plugin_name)
