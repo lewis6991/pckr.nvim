@@ -332,8 +332,9 @@ end
 --- @async
 --- Find and remove any plugins not currently configured for use
 --- @param plugins? string[]
+--- @param silent? boolean
 --- @return table<string,true>? removed_plugins nil is operation was cancelled
-function M.clean(plugins)
+function M.clean(plugins, silent)
   log.debug('Starting clean')
 
   local to_remove --- @type table<string,string>
@@ -354,7 +355,11 @@ function M.clean(plugins)
   log.debug('extra plugins', to_remove)
 
   if not next(to_remove) then
-    log.info('No plugins to remove')
+    if not silent then
+      log.info('No plugins to remove')
+    else
+      log.debug('No plugins to remove')
+    end
     return {}
   end
 
@@ -391,20 +396,22 @@ end
 --- @param op 'sync'|'reinstall'|'install'|'update'|'upgrade'|'clean'
 --- @param plugins? string[]
 function M.sync(op, plugins)
-  if not plugins or #plugins == 0 then
-    plugins = vim.tbl_keys(pckr_plugins)
-  end
+  local do_sync = op == 'sync'
+  local do_reinstall = op == 'reinstall'
+  local do_clean = do_sync or do_reinstall or op == 'clean'
+  local do_install = do_sync or do_reinstall or op == 'install'
+  local do_update = do_sync or op == 'update'
+  local do_upgrade = do_sync or op == 'upgrade'
 
-  local clean = op == 'sync' or op == 'reinstall' or op == 'clean'
-  local install = op == 'sync' or op == 'reinstall' or op == 'install'
-  local update = op == 'sync' or op == 'update'
-  local upgrade = op == 'sync' or op == 'upgrade'
+  local removed = do_clean and M.clean(plugins, op ~= 'clean') or {}
 
-  local removed = clean and M.clean(plugins) or {}
-
-  if not removed or op == 'reinstall' and #removed == 0 then
+  if not removed or do_reinstall and #removed == 0 then
     -- Clean operation was cancelled. Do not do anything else
     return
+  end
+
+  if not plugins or #plugins == 0 then
+    plugins = vim.tbl_keys(pckr_plugins)
   end
 
   --- @type string[], string[]
@@ -412,14 +419,18 @@ function M.sync(op, plugins)
   for _, plugin_name in pairs(plugins) do
     local plugin = pckr_plugins[plugin_name]
     if plugin then
-      if update and plugin.installed then
+      if do_update and plugin.installed then
         if plugin.installed then
           to_update[#to_update + 1] = plugin.name
         else
           log.fmt_debug('Plugin %s is not installed', plugin_name)
         end
         to_update[#to_update + 1] = plugin.name
-      elseif install and not plugin.installed and (op ~= 'reinstall' or removed[plugin.name]) then
+      elseif
+        do_install
+        and not plugin.installed
+        and (op ~= 'reinstall' or removed[plugin.name])
+      then
         -- If operation is reinstall, do not install if plugin was not successfully
         -- removed.
         if plugin.installed then
@@ -438,21 +449,21 @@ function M.sync(op, plugins)
   local disp = open_display()
 
   local delta = util.measure(function()
-    if install then
+    if do_install and next(to_install) then
       log.debug('Gathering install tasks')
       local results = map_task(install_task, to_install, disp, 'installing')
       async.schedule()
       update_helptags(results)
     end
 
-    if update then
+    if do_update and next(to_update) then
       log.debug('Gathering update tasks')
       local results = map_task(update_task, to_update, disp, 'updating')
       async.schedule()
       update_helptags(results)
     end
 
-    if upgrade then
+    if do_upgrade then
       pckr_plugins['pckr.nvim'] = get_pckr_spec()
       local results = map_task(update_task, { 'pckr.nvim' }, disp, 'updating')
       async.schedule()
