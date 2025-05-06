@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0](https://github.com/lewis6991/pckr.nvim/compare/v1.0.0...v1.1.0) (2025-05-06)
+
+
+### Features
+
+* add reinstall() ([a5211a2](https://github.com/lewis6991/pckr.nvim/commit/a5211a2a110b9ef29f9d9424a8ed3ddc93ed5175))
+* add uninstall action ([9dca6a9](https://github.com/lewis6991/pckr.nvim/commit/9dca6a99b9a88b9b193ef50ba19a994c2c5bc9d0))
+* load `Pckr status` with `Pckr` ([546a1b7](https://github.com/lewis6991/pckr.nvim/commit/546a1b7d4df7c341f33884114d918433be66c51d))
+
+
+### Bug Fixes
+
+* [#63](https://github.com/lewis6991/pckr.nvim/issues/63) ([93d57e0](https://github.com/lewis6991/pckr.nvim/commit/93d57e026a5411a70eb9c7ce2b681a4c965adb20))
+* buffer checks in display ([4101595](https://github.com/lewis6991/pckr.nvim/commit/4101595a4a788b31c2730730be27a9569ac94639))
+
 ## 1.0.0 (2025-02-17)
 
 
