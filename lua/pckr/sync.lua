@@ -425,7 +425,6 @@ function M.sync(op, plugins)
         else
           log.fmt_debug('Plugin %s is not installed', plugin_name)
         end
-        to_update[#to_update + 1] = plugin.name
       elseif
         do_install
         and not plugin.installed
