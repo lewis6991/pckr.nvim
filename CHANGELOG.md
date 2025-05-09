@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/lewis6991/pckr.nvim/compare/v1.1.0...v1.1.1) (2025-05-09)
+
+
+### Bug Fixes
+
+* remove mistake line that causes double updates ([05aff46](https://github.com/lewis6991/pckr.nvim/commit/05aff46cd89583dcac90a311be328b80007c9637))
+
 ## [1.1.0](https://github.com/lewis6991/pckr.nvim/compare/v1.0.0...v1.1.0) (2025-05-06)
 
 
