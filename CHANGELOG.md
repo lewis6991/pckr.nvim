@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/lewis6991/pckr.nvim/compare/v1.1.1...v1.1.2) (2025-08-29)
+
+
+### Bug Fixes
+
+* better error handling for ref resolution ([189de80](https://github.com/lewis6991/pckr.nvim/commit/189de8012c364fab986cead1b12bc68ee671209a))
+* **event:** do no reissue autocmd on lazy load ([dcc0e27](https://github.com/lewis6991/pckr.nvim/commit/dcc0e2766d7a3a1911287fef7060ac07908cf376))
+
 ## [1.1.1](https://github.com/lewis6991/pckr.nvim/compare/v1.1.0...v1.1.1) (2025-05-09)
 
 
