@@ -168,20 +168,28 @@ local SHA_PAT = string.rep('%x', 40)
 
 ---@param dir string
 ---@param ref string
----@return string?
+---@return string? ref
+---@return string? err
 local function resolve_ref(dir, ref)
   if ref:match(SHA_PAT) then
     return ref
   end
   local ptr = ref:match('^ref: (.*)')
-  if ptr then
-    return head(dir, '.git', unpack(vim.split(ptr, '/')))
+  if not ptr then
+    return nil, ('Could not resolve ref %s in %s'):format(ref, dir)
   end
+
+  local ret = head(dir, '.git', unpack(vim.split(ptr, '/')))
+  if not ret then
+    return nil, ('Could not resolve ref %s in %s (ptr: %s)'):format(ref, dir, ptr)
+  end
+  return ret
 end
 
 ---@param dir string
 ---@param what? string
----@return string?
+---@return string? head
+---@return string? err
 local function get_head(dir, what)
   return resolve_ref(dir, assert(head(dir, '.git', what or 'HEAD')))
 end
@@ -484,8 +492,14 @@ local function update(plugin, disp, opts)
     end
   end
 
-  update_task('checking current commit...')
-  plugin.revs[1] = get_head(plugin.install_path)
+  do
+    update_task('checking current commit...')
+    local err
+    plugin.revs[1], err = get_head(plugin.install_path)
+    if err then
+      return false, err
+    end
+  end
 
   do -- fetch updates
     update_task('fetching updates...')
@@ -535,7 +549,11 @@ local function update(plugin, disp, opts)
     end
     plugin.revs[2] = assert(out:gsub('%s', ''))
   else
-    plugin.revs[2] = get_head(plugin.install_path)
+    local err
+    plugin.revs[2], err = get_head(plugin.install_path)
+    if err then
+      return false, err
+    end
   end
 
   if plugin.revs[1] == plugin.revs[2] then
@@ -658,7 +676,8 @@ end
 --- @async
 --- Returns HEAD's short hash
 --- @param plugin Pckr.Plugin
---- @return string?
+--- @return string? rev
+--- @return string? err
 function M.get_rev(plugin)
   return get_head(plugin.install_path)
 end
