@@ -2,7 +2,7 @@ local util = require('pckr.util')
 
 local join_paths = util.join_paths
 
---- @class (exact) Pckr.Config.Display
+--- @class (exact) Pckr.UserConfig.Display
 --- @field non_interactive? boolean
 --- @field prompt_border?   string
 --- @field working_sym?     string
@@ -13,17 +13,36 @@ local join_paths = util.join_paths
 --- @field item_sym?        string
 --- @field header_sym?      string
 --- @field keybindings?     table<string,(string|string[])>
+---
+--- @class (exact) Pckr.Config.Display
+--- @field non_interactive boolean
+--- @field prompt_border   string
+--- @field working_sym     string
+--- @field error_sym       string
+--- @field done_sym        string
+--- @field removed_sym     string
+--- @field moved_sym       string
+--- @field item_sym        string
+--- @field header_sym      string
+--- @field keybindings     table<string,(string|string[])>
 
 --- @class (exact) Pckr.Config.Git
---- @field cmd?                string
---- @field clone_timeout?      integer
+--- @field default_url_format string
+---
+--- @class (exact) Pckr.UserConfig.Git
 --- @field default_url_format? string
 
 --- @class (exact) Pckr.Config.Log
 --- @field level Pckr.LogLevel
+---
+--- @class (exact) Pckr.UserConfig.Log
+--- @field level? Pckr.LogLevel
 
 --- @class (exact) Pckr.Config.Lockfile
 --- @field path string
+
+--- @class (exact) Pckr.UserConfig.Lockfile
+--- @field path? string
 
 --- @class (exact) Pckr.UserConfig
 --- @field pack_dir?     string
@@ -32,10 +51,10 @@ local join_paths = util.join_paths
 --- @field max_jobs?     integer
 --- @field autoremove?   boolean
 --- @field autoinstall?  boolean
---- @field display?      Pckr.Config.Display
---- @field git?          Pckr.Config.Git
---- @field log?          Pckr.Config.Log
---- @field lockfile?     Pckr.Config.Lockfile
+--- @field display?      Pckr.UserConfig.Display
+--- @field git?          Pckr.UserConfig.Git
+--- @field log?          Pckr.UserConfig.Log
+--- @field lockfile?     Pckr.UserConfig.Lockfile
 
 --- @class (exact) Pckr.Config : Pckr.UserConfig
 --- @field pack_dir     string
@@ -61,7 +80,6 @@ local config = {
   max_jobs = nil,
   git = {
     cmd = 'git',
-    clone_timeout = 60,
     default_url_format = 'https://github.com/%s.git',
   },
   display = {

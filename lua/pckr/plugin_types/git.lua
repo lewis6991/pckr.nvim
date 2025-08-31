@@ -76,7 +76,7 @@ local function git_run(args, opts)
   opts = opts or {}
   opts.env = opts.env or job_env
   local obj = jobs.run({
-    config.git.cmd,
+    'git',
     '-c',
     'advice.diverging=false',
     '-c',
@@ -439,7 +439,7 @@ local function install(plugin, disp)
 
   sanitize_path(plugin.install_path)
 
-  local ok, out = clone(plugin, update_task, config.git.clone_timeout * 1000)
+  local ok, out = clone(plugin, update_task, 60 * 1000)
   if not ok then
     return nil, out
   end
