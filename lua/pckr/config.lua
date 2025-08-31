@@ -1,6 +1,6 @@
 local util = require('pckr.util')
 
-local join_paths = util.join_paths
+local joinpath = vim.fs.joinpath
 
 --- @class (exact) Pckr.UserConfig.Display
 --- @field non_interactive? boolean
@@ -73,7 +73,7 @@ local join_paths = util.join_paths
 
 --- @type Pckr.Config
 local config = {
-  pack_dir = join_paths(vim.fn.stdpath('data') --[[@as string]], 'site'),
+  pack_dir = joinpath(vim.fn.stdpath('data') --[[@as string]], 'site'),
   _pack_dir = '',
   _start_dir = '',
   _opt_dir = '',
@@ -101,7 +101,7 @@ local config = {
   },
   log = { level = 'info' },
   lockfile = {
-    path = join_paths(vim.fn.stdpath('config') --[[@as string]], 'pckr', 'lockfile.lua'),
+    path = joinpath(vim.fn.stdpath('config') --[[@as string]], 'pckr', 'lockfile.lua'),
   },
   autoremove = false,
   autoinstall = true,
@@ -121,9 +121,9 @@ local function set(_, user_config)
   config.pack_dir = vim.fn.fnamemodify(config.pack_dir, ':p')
   config.pack_dir = config.pack_dir:gsub(util.get_separator() .. '$', '', 1)
 
-  local pack_dir = join_paths(config.pack_dir, 'pack', 'pckr')
-  config._opt_dir = join_paths(pack_dir, 'opt')
-  config._start_dir = join_paths(pack_dir, 'start')
+  local pack_dir = joinpath(config.pack_dir, 'pack', 'pckr')
+  config._opt_dir = joinpath(pack_dir, 'opt')
+  config._start_dir = joinpath(pack_dir, 'start')
 
   if #vim.api.nvim_list_uis() == 0 then
     config.display.non_interactive = true

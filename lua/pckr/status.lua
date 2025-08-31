@@ -197,7 +197,7 @@ function M.run()
     return
   end
 
-  local disp = assert(display.open())
+  local disp = display.open()
 
   disp:update_headline_message(fmt('Total plugins: %d', vim.tbl_count(plugins_by_name)))
 

@@ -111,10 +111,10 @@ end
 ---Use this to create a function which executes in an async context but
 ---called from a non-async context. Inherently this cannot return anything
 ---since it is non-blocking
---- @generic F: function
+--- @generic T, R
 --- @param nargs integer
---- @param func async F
---- @return F
+--- @param func async fun(...: T): R...
+--- @return fun(...: T, callback?: fun(...: R))
 function M.sync(nargs, func)
   return function(...)
     assert(coroutine.running() == main, 'Cannot call sync function in async context')

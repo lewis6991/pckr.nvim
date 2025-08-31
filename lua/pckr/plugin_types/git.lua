@@ -1,11 +1,10 @@
 local a = require('pckr.async')
-local config = require('pckr.config')
 local jobs = require('pckr.jobs')
 local log = require('pckr.log')
 local util = require('pckr.util')
 
 local fmt = string.format
-local uv = vim.loop
+local uv = vim.uv
 
 --- @class Pckr.PluginHandler.Git: Pckr.PluginHandler
 local M = {}
@@ -158,7 +157,7 @@ end
 --- @param ... string
 --- @return string?
 local function head(...)
-  local lines = util.file_lines(util.join_paths(...))
+  local lines = util.file_lines(vim.fs.joinpath(...))
   if lines then
     return lines[1]
   end
@@ -197,7 +196,7 @@ end
 ---@param dir string
 ---@return table<string,string>
 local function packed_refs(dir)
-  local refs = util.join_paths(dir, '.git', 'packed-refs')
+  local refs = vim.fs.joinpath(dir, '.git', 'packed-refs')
   local lines = util.file_lines(refs)
   local ret = {} --- @type table<string,string>
   for _, line in ipairs(lines or {}) do
@@ -305,9 +304,9 @@ end
 --- @param update_task? fun(msg: string, info?: string[])
 --- @return boolean, string
 local function checkout(plugin, update_task)
-  update_task = update_task or function() end
-
-  update_task('fetching reference...')
+  if update_task then
+    update_task('fetching reference...')
+  end
 
   local commit, tag = plugin.commit, plugin.tag
 
@@ -319,7 +318,9 @@ local function checkout(plugin, update_task)
   elseif tag then
     if tag:match('%*') then
       -- Resolve tag
-      update_task(fmt('getting tag for wildcard %s...', tag))
+      if update_task then
+        update_task(fmt('resolving tag for wildcard %s...', tag))
+      end
       local tagerr
       tag, tagerr = resolve_tag(plugin)
       if not tag then
@@ -337,14 +338,16 @@ local function checkout(plugin, update_task)
     end
   end
 
-  assert(target, 'Could not determine target for ' .. plugin.install_path)
-
-  update_task('checking out...')
+  if update_task then
+    update_task('checking out...')
+  end
   local cmd = vim.list_extend({ 'checkout', '--progress', target }, checkout_args)
   return git_run(cmd, {
     cwd = plugin.install_path,
     on_stderr = function(chunk)
-      update_task('checking out... ', process_progress(chunk))
+      if update_task then
+        update_task('checking out... ', process_progress(chunk))
+      end
     end,
   })
 end
@@ -402,10 +405,7 @@ end
 --- If `path` is a link, remove it if the destination does not exist.
 --- @param path string
 local function sanitize_path(path)
-  assert(path)
-  --- @diagnostic disable-next-line
   local lerr, stat = a.wait(2, uv.fs_lstat, path)
-  --- @diagnostic disable-next-line
   if lerr or stat.type ~= 'link' then
     -- path doesn't exist or isn't a link
     return
@@ -547,7 +547,7 @@ local function update(plugin, disp, opts)
       log_err(plugin, 'failed rev-parse', out)
       return false, out
     end
-    plugin.revs[2] = assert(out:gsub('%s', ''))
+    plugin.revs[2] = out:gsub('%s', '')
   else
     local err
     plugin.revs[2], err = get_head(plugin.install_path)

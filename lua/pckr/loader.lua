@@ -1,4 +1,4 @@
-local uv = vim.uv or vim.loop
+local uv = vim.uv
 
 local log = require('pckr.log')
 local fmt_debug = log.fmt_debug
@@ -70,7 +70,7 @@ local function walk(path, fn)
     if not name or not t then
       break
     end
-    local child = util.join_paths(path, name)
+    local child = vim.fs.joinpath(path, name)
     if t == 'directory' then
       walk(child, fn)
     end
@@ -80,7 +80,7 @@ end
 
 --- @param ... string
 local function source_runtime(...)
-  local dir = util.join_paths(...)
+  local dir = vim.fs.joinpath(...)
 
   ---@type string[]?, string[]?
   local vim_files, lua_files

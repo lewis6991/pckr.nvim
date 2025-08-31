@@ -54,7 +54,7 @@ function M.updater(plugin, disp, opts)
     end
   end
 
-  local gitdir = util.join_paths(plugin.install_path, '.git')
+  local gitdir = vim.fs.joinpath(plugin.install_path, '.git')
   if uv.fs_stat(gitdir) then
     -- Only ever fast forward local plugins
     opts = vim.deepcopy(opts or {})

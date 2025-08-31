@@ -213,7 +213,7 @@ local function process_spec_item(spec0, required_by)
   end
 
   local install_path_dir = is_start and config._start_dir or config._opt_dir
-  local install_path = util.join_paths(install_path_dir, name)
+  local install_path = vim.fs.joinpath(install_path_dir, name)
 
   --- @type Pckr.Plugin
   local plugin = {

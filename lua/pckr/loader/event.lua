@@ -1,4 +1,4 @@
---- @param events string|string[]
+--- @param events vim.api.keyset.events|vim.api.keyset.events[]
 --- @param pattern string?
 --- @return fun(_: fun())
 return function(events, pattern)

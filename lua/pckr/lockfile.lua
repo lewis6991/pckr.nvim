@@ -33,7 +33,7 @@ local function run_tasks(tasks, disp, kind)
     log.fmt_debug('Running tasks: %s', kind)
   end
   if disp then
-    disp:update_headline_message(string.format('%s %d / %d plugins', kind, #tasks, #tasks))
+    disp:update_headline_message(fmt('%s %d / %d plugins', kind, #tasks, #tasks))
   end
   return a.join(limit, tasks, interrupt_check)
 end
@@ -41,7 +41,7 @@ end
 --- @param path string
 --- @param info table<string,string>
 local function update(path, info)
-  local dir = assert(vim.fs.dirname(path))
+  local dir = vim.fs.dirname(path)
   if vim.fn.isdirectory(dir) == 0 then
     vim.fn.mkdir(dir, 'p')
   end
@@ -84,7 +84,7 @@ function M.lock()
   a.schedule()
   local lockfile = config.lockfile.path
   update(lockfile, info1)
-  log.fmt_info('Lockfile created at %s', config.lockfile.path)
+  log.fmt_info('Lockfile created at %s', lockfile.path)
 end
 
 --- @param plugin Pckr.Plugin
@@ -125,7 +125,7 @@ end)
 
 --- @async
 function M.restore()
-  local disp = assert(display.open({}))
+  local disp = display.open({})
   disp:update_headline_message('Restoring from lockfile')
 
   local lockfile = config.lockfile.path

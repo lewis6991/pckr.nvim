@@ -213,7 +213,6 @@ function Display:diff()
 end
 
 --- @package
---- @param self Pckr.Display
 function Display:goto_file()
   if not self:is_valid() then
     return
@@ -239,7 +238,7 @@ function Display:goto_file()
   local lno = target:match(':(%d+)$') --- @type string?
   target = target:gsub(':%d+$', '') --- @type string
 
-  local stat = vim.loop.fs_stat(target)
+  local stat = vim.uv.fs_stat(target)
   if not stat then
     return
   end
@@ -293,7 +292,6 @@ function Display:get_task_region(name)
 end
 
 --- @private
---- @param self Pckr.Display
 --- @param name string
 function Display:clear_task(name)
   local srow, erow = assert(self:get_task_region(name))
@@ -424,7 +422,6 @@ end
 
 --- @package
 --- Toggle the display of detailed information for a plugin in the final results display
---- @param self Pckr.Display
 function Display:toggle_info()
   if not self:is_valid() then
     return
@@ -491,8 +488,7 @@ local function prompt_user(headline, body, callback)
     noautocmd = true,
   })
 
-  local check = vim.loop.new_prepare()
-  assert(check)
+  local check = vim.uv.new_prepare()
   local prompted = false
   check:start(vim.schedule_wrap(function()
     if not api.nvim_win_is_valid(win) then
@@ -510,7 +506,6 @@ end
 
 --- @package
 --- Prompt a user to revert the latest update for a plugin
---- @param self Pckr.Display
 function Display:prompt_revert()
   if not self:is_valid() then
     return
@@ -627,7 +622,6 @@ end
 
 --- @private
 --- Decrement the count of active operations in the headline
---- @param self Pckr.Display
 function Display:decrement_headline_count()
   local headline = api.nvim_buf_get_lines(self.buf, 0, 1, false)[1]
   local count_start, count_end = headline:find('%d+')
@@ -708,7 +702,6 @@ function Display:task_failed(name, message, info)
 end
 
 --- Update the status message of a task in progress
---- @param self Pckr.Display
 --- @param name string
 --- @param message string
 --- @param info? string[]

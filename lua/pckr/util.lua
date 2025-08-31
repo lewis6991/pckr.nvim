@@ -1,4 +1,4 @@
-local uv = vim.uv or vim.loop
+local uv = vim.uv
 
 --- @class Pckr.util
 local M = {}
@@ -14,12 +14,6 @@ function M.get_separator()
     return '\\'
   end
   return '/'
-end
-
---- @param ... string
---- @return string
-function M.join_paths(...)
-  return (table.concat({ ... }, '/'):gsub('//+', '/'))
 end
 
 --- @type table<string, number>

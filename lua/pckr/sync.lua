@@ -46,7 +46,7 @@ local function find_extra_plugins(plugins)
   }) do
     for name, ty in vim.fs.dir(dir) do
       if ty ~= 'file' then
-        local path = util.join_paths(dir, name)
+        local path = vim.fs.joinpath(dir, name)
         local real_path = vim.uv.fs_realpath(path)
         if not real_path then
           -- Broken link
@@ -85,7 +85,7 @@ local function run_tasks(tasks, disp, kind)
 
   log.fmt_debug('Running tasks: %s', kind)
   if disp then
-    disp:update_headline_message(string.format('%s %d / %d plugins', kind, #tasks, #tasks))
+    disp:update_headline_message(fmt('%s %d / %d plugins', kind, #tasks, #tasks))
   end
 
   --- @type {[1]: string?, [2]: string?}[]
@@ -153,7 +153,7 @@ local function post_update_hook(plugin, disp)
       return 'Error running post update hook: ' .. err
     end
   elseif type(run_task) == 'string' then
-    disp:task_update(plugin.name, string.format('running post update hook...("%s")', run_task))
+    disp:task_update(plugin.name, fmt('running post update hook...("%s")', run_task))
     if vim.startswith(run_task, ':') then
       -- Run a vim command
       --- @type boolean, string?
@@ -166,7 +166,7 @@ local function post_update_hook(plugin, disp)
       local jr = jobs.run(run_task, { cwd = plugin.install_path })
 
       if jr.code ~= 0 then
-        return string.format('Error running post update hook: %s', jr.stderr)
+        return fmt('Error running post update hook: %s', jr.stderr)
       end
     end
   end
@@ -182,7 +182,7 @@ local install_task = async.sync(2, function(plugin, disp)
 
   local err = plugin_type.installer(plugin, disp)
 
-  plugin.installed = vim.fn.isdirectory(plugin.install_path) ~= 0
+  plugin.installed = fn.isdirectory(plugin.install_path) ~= 0
 
   if not err then
     err = post_update_hook(plugin, disp)
@@ -270,15 +270,15 @@ local function helptags_stale(dir)
   local glob = fn.glob
 
   -- Adapted directly from minpac.vim
-  local txts = glob(util.join_paths(dir, '*.txt'), true, true)
-  vim.list_extend(txts, glob(util.join_paths(dir, '*.[a-z][a-z]x'), true, true))
+  local txts = glob(vim.fs.joinpath(dir, '*.txt'), true, true)
+  vim.list_extend(txts, glob(vim.fs.joinpath(dir, '*.[a-z][a-z]x'), true, true))
 
   if #txts == 0 then
     return false
   end
 
-  local tags = glob(util.join_paths(dir, 'tags'), true, true)
-  vim.list_extend(tags, glob(util.join_paths(dir, 'tags-[a-z][a-z]'), true, true))
+  local tags = glob(vim.fs.joinpath(dir, 'tags'), true, true)
+  vim.list_extend(tags, glob(vim.fs.joinpath(dir, 'tags-[a-z][a-z]'), true, true))
 
   if #tags == 0 then
     return true
@@ -303,7 +303,7 @@ local function update_helptags(results)
   end
 
   for _, dir in ipairs(paths) do
-    local doc_dir = util.join_paths(dir, 'doc')
+    local doc_dir = vim.fs.joinpath(dir, 'doc')
     if helptags_stale(doc_dir) then
       log.fmt_debug('Updating helptags for %s', doc_dir)
       vim.cmd('silent! helptags ' .. fn.fnameescape(doc_dir))
@@ -381,7 +381,7 @@ function M.clean(plugins, silent)
   local removed = {} --- @type table<string,true>
 
   for path, plugin_name in pairs(to_remove) do
-    if vim.fn.delete(path, 'rf') == -1 then
+    if fn.delete(path, 'rf') == -1 then
       pckr_plugins[plugin_name].installed = nil
       log.fmt_warn('Could not remove %s', path)
     else

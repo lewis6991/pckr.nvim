@@ -1,6 +1,6 @@
 local pckr_config = require('pckr.config').log
 
-local start_time = vim.loop.hrtime()
+local start_time = vim.uv.hrtime()
 
 -- log.lua
 --
@@ -171,7 +171,7 @@ local function log_at_level_file(level_config, message_maker, ...)
     '[%-6s%s %s] %s: %s\n',
     level_config.name:upper(),
     os.date('%H:%M:%S'),
-    vim.loop.hrtime() - start_time,
+    vim.uv.hrtime() - start_time,
     lineinfo,
     message_maker(...)
   )
