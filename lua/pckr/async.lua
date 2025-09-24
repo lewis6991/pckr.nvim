@@ -113,8 +113,8 @@ end
 ---since it is non-blocking
 --- @generic T, R
 --- @param nargs integer
---- @param func async fun(...: T): R...
---- @return fun(...: T, callback?: fun(...: R))
+--- @param func async fun(...: T...): R...
+--- @return fun(...: T..., callback?: fun(...: R...))
 function M.sync(nargs, func)
   return function(...)
     assert(coroutine.running() == main, 'Cannot call sync function in async context')

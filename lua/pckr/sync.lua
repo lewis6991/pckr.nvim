@@ -17,12 +17,8 @@ local function open_display()
   return display.open({
     diff = async.sync(2, function(plugin, commit, __cb)
       local plugin_type = require('pckr.plugin_types')[plugin.type]
-      plugin_type.diff(plugin, commit)
+      return plugin_type.diff(plugin, commit)
     end),
-    revert_last = function(plugin)
-      local plugin_type = require('pckr.plugin_types')[plugin.type]
-      plugin_type.revert_last(plugin)
-    end,
   })
 end
 
@@ -65,6 +61,7 @@ local function find_extra_plugins(plugins)
   return extra
 end
 
+--- @async
 --- @param tasks (fun(): string, Pckr.Result?)[]
 --- @param disp Pckr.Display?
 --- @param kind string
@@ -88,7 +85,7 @@ local function run_tasks(tasks, disp, kind)
     disp:update_headline_message(fmt('%s %d / %d plugins', kind, #tasks, #tasks))
   end
 
-  --- @type {[1]: string?, [2]: string?}[]
+  --- @type [string?, string?][]
   local results = async.join(limit, tasks, check)
 
   local results1 = {} --- @type table<string,Pckr.Result>
@@ -102,11 +99,12 @@ local function run_tasks(tasks, disp, kind)
   return results1
 end
 
---- @alias Pckr.Task fun(plugin: Pckr.Plugin, disp: Pckr.Display, cb: fun()): string?, string?
+--- @alias Pckr.Task fun(plugin: Pckr.Plugin, disp: Pckr.Display, cb: fun(_:string?, _:string?))
 
 --- @class Pckr.Result
 --- @field err? string
 
+--- @async
 --- @param task Pckr.Task
 --- @param plugins string[]
 --- @param disp? Pckr.Display

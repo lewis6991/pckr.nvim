@@ -11,10 +11,11 @@ local display = require('pckr.display')
 local M = {}
 
 -- TODO(lewis6991): copied from actions.tl - consolidate
+--- @async
 --- @param tasks fun()[]
 --- @param disp? Pckr.Display
 --- @param kind? string
---- @return {[1]: string, [2]: string }[]
+--- @return [string, string][]
 local function run_tasks(tasks, disp, kind)
   if #tasks == 0 then
     log.info('Nothing to do!')
@@ -125,7 +126,7 @@ end)
 
 --- @async
 function M.restore()
-  local disp = display.open({})
+  local disp = display.open()
   disp:update_headline_message('Restoring from lockfile')
 
   local lockfile = config.lockfile.path

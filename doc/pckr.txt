@@ -169,25 +169,6 @@ default values: >lua
       default_url_format = 'https://github.com/%s' -- Lua format string used for "aaa/bbb" style plugins
     },
     log = { level = 'warn' }, -- The default print log level. One of: "trace", "debug", "info", "warn", "error", "fatal".
-    display = {
-      non_interactive = false, -- If true, disable display windows for all operations
-      working_sym     = '⟳', -- The symbol for a plugin being installed/updated
-      error_sym       = '✗', -- The symbol for a plugin with an error in installation/updating
-      done_sym        = '✓', -- The symbol for a plugin which has completed installation/updating
-      removed_sym     = '-', -- The symbol for an unused plugin which was removed
-      moved_sym       = '→', -- The symbol for a plugin which was moved (e.g. from opt to start)
-      header_sym      = '━', -- The symbol for the header line in pckr's display
-      show_all_info   = true, -- Should pckr show all update details automatically?
-      prompt_border   = 'double', -- Border style of prompt popups.
-      keybindings = { -- Keybindings for the display window
-        quit          = 'q',
-        toggle_update = 'u', -- only in preview
-        continue      = 'c', -- only in preview
-        toggle_info   = '<CR>',
-        diff          = 'd',
-        prompt_revert = 'r',
-      }
-    }
   }
 
 <
@@ -243,9 +224,6 @@ and the corresponding plugin is added to the managed set.
 If `requires` is a list, it is treated as a list of plugin specifications
 following the format given above.
 
-If `ensure_dependencies` is true, the plugins specified in `requires` will be
-installed.
-
 Plugins specified in `requires` are removed when no active plugins require
 them.
 
@@ -257,11 +235,6 @@ Once an operation completes, the results are shown in the display window.
 
 q                    close the display window
 <CR>                 toggle information about a particular plugin
-r                    revert an update
-
-They can be configured by changing the value of `config.display.keybindings`
-(see |pckr-configuration|). Setting it to `false` will disable all keybindings.
-Setting any of its keys to `false` will disable the corresponding keybinding.
 
 ==============================================================================
 API                                                                  *pckr-api*

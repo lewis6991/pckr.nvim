@@ -2,30 +2,6 @@ local util = require('pckr.util')
 
 local joinpath = vim.fs.joinpath
 
---- @class (exact) Pckr.UserConfig.Display
---- @field non_interactive? boolean
---- @field prompt_border?   string
---- @field working_sym?     string
---- @field error_sym?       string
---- @field done_sym?        string
---- @field removed_sym?     string
---- @field moved_sym?       string
---- @field item_sym?        string
---- @field header_sym?      string
---- @field keybindings?     table<string,(string|string[])>
----
---- @class (exact) Pckr.Config.Display
---- @field non_interactive boolean
---- @field prompt_border   string
---- @field working_sym     string
---- @field error_sym       string
---- @field done_sym        string
---- @field removed_sym     string
---- @field moved_sym       string
---- @field item_sym        string
---- @field header_sym      string
---- @field keybindings     table<string,(string|string[])>
-
 --- @class (exact) Pckr.Config.Git
 --- @field default_url_format string
 ---
@@ -51,7 +27,6 @@ local joinpath = vim.fs.joinpath
 --- @field max_jobs?     integer
 --- @field autoremove?   boolean
 --- @field autoinstall?  boolean
---- @field display?      Pckr.UserConfig.Display
 --- @field git?          Pckr.UserConfig.Git
 --- @field log?          Pckr.UserConfig.Log
 --- @field lockfile?     Pckr.UserConfig.Lockfile
@@ -60,7 +35,6 @@ local joinpath = vim.fs.joinpath
 --- @field pack_dir     string
 --- @field autoremove   boolean
 --- @field autoinstall  boolean
---- @field display      Pckr.Config.Display
 --- @field git          Pckr.Config.Git
 --- @field log          Pckr.Config.Log
 --- @field lockfile     Pckr.Config.Lockfile
@@ -81,23 +55,6 @@ local config = {
   git = {
     cmd = 'git',
     default_url_format = 'https://github.com/%s.git',
-  },
-  display = {
-    non_interactive = false,
-    working_sym = '⟳',
-    error_sym = '✗',
-    done_sym = '✓',
-    removed_sym = '-',
-    moved_sym = '→',
-    item_sym = '•',
-    header_sym = '━',
-    prompt_border = 'double',
-    keybindings = {
-      quit = 'q',
-      toggle_info = { 'za', '<CR>' },
-      diff = 'd',
-      prompt_revert = 'r',
-    },
   },
   log = { level = 'info' },
   lockfile = {
@@ -124,10 +81,6 @@ local function set(_, user_config)
   local pack_dir = joinpath(config.pack_dir, 'pack', 'pckr')
   config._opt_dir = joinpath(pack_dir, 'opt')
   config._start_dir = joinpath(pack_dir, 'start')
-
-  if #vim.api.nvim_list_uis() == 0 then
-    config.display.non_interactive = true
-  end
 
   return config
 end

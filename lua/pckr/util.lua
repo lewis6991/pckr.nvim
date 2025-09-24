@@ -24,9 +24,10 @@ setmetatable(M.measure_times, {
   end,
 })
 
---- @param what? string|function
---- @param f? function
+--- @param what? string
+--- @param f sync fun()
 --- @return number
+--- @overload fun(f: sync fun()): number
 function M.measure(what, f)
   if type(what) == 'function' then
     f = what
