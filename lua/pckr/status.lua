@@ -268,9 +268,7 @@ function M.run()
     return disp:check()
   end)
 
-  disp:set_title(
-    fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins_by_name), pckr_time)
-  )
+  disp:set_title(fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins_by_name), pckr_time))
 end
 
 return M
