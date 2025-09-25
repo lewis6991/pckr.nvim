@@ -50,7 +50,7 @@ function M.updater(plugin, disp, opts)
     rm(plugin.install_path)
     M.installer(plugin, disp)
     if disp then
-      disp:task_succeeded(plugin.name, 'linking plugin to local path')
+      disp:item_succeeded(plugin.name, 'linking plugin to local path')
     end
   end
 

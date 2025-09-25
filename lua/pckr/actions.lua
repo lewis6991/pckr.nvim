@@ -7,8 +7,7 @@ local M = {}
 --- Installs missing plugins, then updates helptags
 --- @param plugins? string[]
 --- @param _opts table?
---- @param __cb? function
-M.install = async.sync(2, function(plugins, _opts, __cb)
+M.install = async.sync(2, function(plugins, _opts)
   require('pckr.sync').sync('install', plugins)
 end)
 
@@ -18,8 +17,7 @@ end)
 --- helptags.
 --- @param plugins? string[] List of plugin names to update.
 --- @param _opts table?
---- @param __cb? function
-M.update = async.sync(2, function(plugins, _opts, __cb)
+M.update = async.sync(2, function(plugins, _opts)
   require('pckr.sync').sync('update', plugins)
 end)
 
@@ -29,19 +27,17 @@ end)
 --- installed plugins and updates helptags
 --- @param plugins? string[]
 --- @param _opts table?
---- @param __cb? function
-M.sync = async.sync(2, function(plugins, _opts, __cb)
+M.sync = async.sync(2, function(plugins, _opts)
   require('pckr.sync').sync('sync', plugins)
 end)
 
-M.upgrade = async.sync(2, function(_, _opts, __cb)
+M.upgrade = async.sync(2, function(_, _opts)
   require('pckr.sync').sync('upgrade')
 end)
 
 --- @param _ any
 --- @param _opts table?
---- @param __cb? function
-M.status = async.sync(2, function(_, _opts, __cb)
+M.status = async.sync(2, function(_, _opts)
   require('pckr.status').run()
 end)
 
@@ -49,8 +45,7 @@ end)
 --- Finds plugins present in the `pckr` package but not in the managed set
 --- @param _ any
 --- @param _opts table?
---- @param __cb? function
-M.clean = async.sync(2, function(_, _opts, __cb)
+M.clean = async.sync(2, function(_, _opts)
   require('pckr.sync').clean()
 end)
 
@@ -58,8 +53,7 @@ end)
 --- Remove specified plugins.
 --- @param plugins? string[]
 --- @param _opts table?
---- @param __cb? function
-M.uninstall = async.sync(2, function(plugins, _opts, __cb)
+M.uninstall = async.sync(2, function(plugins, _opts)
   require('pckr.sync').clean(plugins or {})
 end)
 
@@ -67,22 +61,19 @@ end)
 --- Remove specified plugins.
 --- @param plugins? string[]
 --- @param _opts table?
---- @param __cb? function
-M.reinstall = async.sync(2, function(plugins, _opts, __cb)
+M.reinstall = async.sync(2, function(plugins, _opts)
   require('pckr.sync').sync('reinstall', plugins)
 end)
 
 --- @param _ any
 --- @param _opts table?
---- @param __cb? function
-M.lock = async.sync(2, function(_, _opts, __cb)
+M.lock = async.sync(2, function(_, _opts)
   require('pckr.lockfile').lock()
 end)
 
 --- @param _ any
 --- @param _opts table?
---- @param __cb? function
-M.restore = async.sync(2, function(_, _opts, __cb)
+M.restore = async.sync(2, function(_, _opts)
   require('pckr.lockfile').restore()
 end)
 

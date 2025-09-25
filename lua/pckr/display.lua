@@ -6,72 +6,75 @@ local pckr_plugins = require('pckr.plugin').plugins_by_name
 
 local ns = api.nvim_create_namespace('pckr.display')
 
-local HEADER_LINES = 2
-
-local TITLE = 'pckr.nvim'
-
 local SYMBOLS = {
   item = '•',
   working = '⟳',
   error = '✗',
   done = '✓',
+  header = '━',
 }
 
 --- @class Pckr.Display.Item
+--- @field name string
 --- @field status? 'running' | 'failed' | 'success' | 'done'
 --- @field message? string
 --- @field info? string[] Additional info that can be collapsed
---- @field expanded? boolean Whether info is being displayed
---- @field mark? integer Extmark used track the location of the item in the buffer
---- @field nameMark? integer Extmark used track the location of the item in the buffer
+--- @field expanded boolean Whether info is being displayed
+--- @field mark integer Extmark used track the location of the item in the buffer
 
 --- @class Pckr.Display.Callbacks
 --- @field diff fun(plugin: Pckr.Plugin, commit: string, callback: function)
 
 --- @class Pckr.Display
---- @field items table<string,Pckr.Display.Item?>
+--- @field items table<string,Pckr.Display.Item>
+--- @field win integer
 local Display = {}
 
 function Display:check()
   return not self.running
 end
 
---- Update a task as having successfully completed
+--- Update an item as having successfully completed
 --- @param name string
 --- @param message string
 --- @param info? string|string[]
-function Display:task_succeeded(name, message, info)
-  self:task_done(name, message, info, true)
+function Display:item_succeeded(name, message, info)
+  self:item_done(name, message, info, true)
 end
 
---- Update a task as having unsuccessfully failed
+--- Update an item as having unsuccessfully failed
 --- @param name string
 --- @param message string
 --- @param info? string|string[]
-function Display:task_failed(name, message, info)
-  self:task_done(name, message, info, false)
+function Display:item_failed(name, message, info)
+  self:item_done(name, message, info, false)
 end
 
---- @private
---- @return string?, [integer, integer]?
-function Display:_get_cursor_task()
-  local row = unpack(api.nvim_win_get_cursor(0)) - 1
-  -- TODO(lewis6991): Another extmark bug(?):
-  --       nvim_buf_get_extmarks(0, ns, row-1, row+1, {})
-  -- does not return all the extmarks that the following would:
-  --       nvim_buf_get_extmarks(0, ns, {row, 0}, {row,-1}, {})
-  for _, e in ipairs(api.nvim_buf_get_extmarks(0, ns, 0, -1, { details = true })) do
-    local id, srow, erow = e[1], e[2], assert(e[4]).end_row
-    if row >= srow and row <= erow then
-      for name, item in pairs(self.items) do
-        if item.mark == id then
-          return name, { srow + 1, 0 }
-        end
-      end
+--- @param win integer
+--- @param mark_id integer
+--- @return integer, integer
+local function get_extmark_region(win, mark_id)
+  local buf = api.nvim_win_get_buf(win)
+  local info = api.nvim_buf_get_extmark_by_id(buf, ns, mark_id, { details = true })
+  local srow, erow = info[1], assert(info[3]).end_row
+  if not erow then
+    return srow, srow
+  end
+  return srow, (erow or srow) + 1
+end
+
+--- @param win integer
+--- @param items table<string,Pckr.Display.Item>
+--- @return Pckr.Display.Item?
+local function get_cursor_item(win, items)
+  local row = api.nvim_win_get_cursor(win)[1] - 1
+
+  for _, item in pairs(items) do
+    local srow, erow = get_extmark_region(win, item.mark)
+    if row >= srow and row < erow then
+      return item
     end
   end
-
-  print('no marks')
 end
 
 --- @param inner? boolean
@@ -85,7 +88,7 @@ local function get_win_config(inner)
     relative = 'editor',
     style = 'minimal',
     width = width,
-    border = inner and 'rounded' or nil,
+    border = 'rounded',
     height = height,
     zindex = 40,
     row = (vim.o.lines - height) / 2,
@@ -124,7 +127,7 @@ local function open_win(inner)
 end
 
 --- @param x string|string[]
---- @return string[]?
+--- @return string[]
 local function normalize_lines(x)
   if type(x) == 'string' then
     x = { x }
@@ -159,14 +162,33 @@ local function keymap(buf, l, desc, r)
 end
 
 --- Update the text of the display buffer
---- @param buf integer
+--- @param win integer
 --- @param srow integer
 --- @param erow integer
---- @param text string|string[]
-local function set_lines(buf, srow, erow, text)
-  text = assert(normalize_lines(text))
+--- @param lines [string, string?][][]
+local function set_lines(win, srow, erow, lines)
+  local buf = api.nvim_win_get_buf(win)
   vim.bo[buf].modifiable = true
-  api.nvim_buf_set_lines(buf, srow, erow, true, text)
+  local cursor = api.nvim_win_get_cursor(win)
+
+  local lines0 = {} --- @type string[]
+  for _, l in ipairs(lines) do
+    local line = {} --- @type string[]
+    for _, e in ipairs(l) do
+      line[#line + 1] = e[1]
+    end
+    lines0[#lines0 + 1] = table.concat(line)
+  end
+  lines0 = normalize_lines(lines0)
+
+  api.nvim_buf_set_lines(buf, srow, erow, true, lines0)
+
+  local max_lnum = api.nvim_buf_line_count(buf)
+  if cursor[1] > max_lnum then
+    cursor = { max_lnum, 0 }
+  end
+  api.nvim_win_set_cursor(win, cursor)
+
   vim.bo[buf].modifiable = false
 end
 
@@ -181,13 +203,13 @@ function Display:diff()
     return
   end
 
-  local task_name = self:_get_cursor_task()
-  if not task_name then
+  local item = get_cursor_item(self.win, self.items)
+  if not item then
     log.warn('No plugin selected!')
     return
   end
 
-  local plugin = pckr_plugins[task_name]
+  local plugin = pckr_plugins[item.name]
 
   if not plugin then
     log.warn('Plugin not available!')
@@ -217,8 +239,8 @@ function Display:diff()
           log.warn('No diff available')
           return
         end
-        local buf = open_win(true)
-        set_lines(buf, 0, -1, text)
+        local buf, win = open_win(true)
+        set_lines(win, 0, -1, { { text } })
         api.nvim_buf_set_name(buf, commit)
         keymap(buf, 'q', 'quit', '<cmd>close!<cr>')
         vim.bo[buf].filetype = 'git'
@@ -227,28 +249,7 @@ function Display:diff()
   end
 end
 
---- @param buf integer
---- @param mark_id integer
---- @return integer, integer
-local function get_extmark_region(buf, mark_id)
-  local info = api.nvim_buf_get_extmark_by_id(buf, ns, mark_id, { details = true })
-  local srow, erow = info[1], assert(info[3]).end_row
-
-  if not erow then
-    return srow, srow
-  end
-
-  -- TODO(lewis6991): sometimes the end_row will be lower than start_row. Could
-  -- be an extmark bug?
-  if srow > erow then
-    --- @type integer, integer
-    srow, erow = erow, srow
-  end
-
-  return srow, erow + 1
-end
-
---- @alias Pckr.TaskPos 'top' | 'bottom'
+--- @alias Pckr.display.ItemPos 'top' | 'bottom'
 
 local MAX_COL = 10000
 
@@ -277,17 +278,23 @@ local function icon_for_status(status)
 end
 
 --- @private
---- @param buf integer
---- @param task string
+--- @param win integer
 --- @param item Pckr.Display.Item
 --- @param static? boolean
 --- @param top? boolean
-local function render_task(buf, task, item, static, top)
+local function render_item(win, item, static, top)
+  local buf = api.nvim_win_get_buf(win)
+
+  -- clear
+  local old_srow, old_erow = get_extmark_region(win, item.mark)
+  api.nvim_buf_clear_namespace(buf, ns, old_srow, old_erow)
+  set_lines(win, old_srow, old_erow, {})
+
   --- @type [string, string?][][]
   local lines = {
     {
       { (' %s '):format(icon_for_status(item.status)) },
-      { ('%s: '):format(task), 'pckrPackageName' },
+      { ('%s: '):format(item.name), 'pckrPackageName' },
       item.message and { item.message } or nil,
     },
   }
@@ -298,39 +305,16 @@ local function render_task(buf, task, item, static, top)
     end
   end
 
-  local pos --- @type Pckr.TaskPos?
+  local pos --- @type 'top' | 'bottom' | nil
   if top then
     pos = 'top'
   elseif not static then
     pos = (item.status == 'success' or item.status == 'failed') and 'top' or nil
   end
 
-  -- If pos is given, task will be rendered at the top or bottom of the buffer.
-  -- If not given then will use last position, if exists, else bottom.
-  if pos or not item.mark then
-    -- clear
-    if item.mark then
-      local old_srow, old_erow = get_extmark_region(buf, item.mark)
-      api.nvim_buf_clear_namespace(buf, ns, old_srow, old_erow)
-      set_lines(buf, old_srow, old_erow, {})
-    end
+  local new_row = pos == 'top' and 0 or old_srow
 
-    local new_row = pos == 'top' and HEADER_LINES or api.nvim_buf_line_count(buf)
-    item.mark = api.nvim_buf_set_extmark(buf, ns, new_row, 0, {})
-  end
-
-  local srow, erow = get_extmark_region(buf, item.mark)
-
-  local lines0 = {} --- @type string[]
-  for _, l in ipairs(lines) do
-    local line = {} --- @type string[]
-    for _, e in ipairs(l) do
-      line[#line + 1] = e[1]
-    end
-    lines0[#lines0 + 1] = table.concat(line)
-  end
-
-  set_lines(buf, srow, erow, lines0)
+  set_lines(win, new_row, new_row, lines)
 
   -- Apply highlights
   for i, line in ipairs(lines) do
@@ -340,7 +324,7 @@ local function render_task(buf, task, item, static, top)
       local len = #txt
 
       if hl then
-        local row = srow + i - 1
+        local row = new_row + i - 1
         api.nvim_buf_set_extmark(buf, ns, row, offset, {
           end_row = row,
           end_col = offset + len,
@@ -352,9 +336,9 @@ local function render_task(buf, task, item, static, top)
     end
   end
 
-  -- Apply mark for tracking the task region
-  api.nvim_buf_set_extmark(buf, ns, srow, 0, {
-    end_row = srow + #lines - 1,
+  -- Apply mark for tracking the item region
+  api.nvim_buf_set_extmark(buf, ns, new_row, 0, {
+    end_row = new_row + #lines - 1,
     end_col = MAX_COL,
     strict = false,
     id = item.mark,
@@ -369,16 +353,16 @@ function Display:toggle_info()
     return
   end
 
-  local task_name, cursor_pos = self:_get_cursor_task()
-  if not task_name or not cursor_pos then
+  local item = get_cursor_item(self.win, self.items)
+  if not item then
     log.warn('No plugin selected!')
     return
   end
 
-  local item = assert(self.items[task_name])
   item.expanded = not item.expanded
-  render_task(self.buf, task_name, item, true)
-  api.nvim_win_set_cursor(self.win, cursor_pos)
+  render_item(self.win, item, true)
+  local item_row = get_extmark_region(self.win, item.mark)
+  api.nvim_win_set_cursor(self.win, { item_row + 1, 0 })
 end
 
 --- Utility function to prompt a user with a question in a floating window
@@ -434,86 +418,84 @@ local function prompt_user(headline, body, callback)
   end))
 end
 
---- Start displaying a new task
+--- Start displaying a new item
 --- @param name string
 --- @param message string
-function Display:task_start(name, message)
-  self.items[name] = self.items[name] or {}
-
+function Display:item_start(name, message)
   local item = self.items[name]
   item.status = 'running'
   item.message = message
+  item.expanded = false
+  render_item(self.win, item, nil, true)
+end
 
-  render_task(self.buf, name, item, nil, true)
+--- @param win integer
+--- @return string?
+local function get_headline_message(win)
+  --- @diagnostic disable-next-line: assign-type-mismatch
+  --- @type [[string], [string], [string]?]
+  local title = api.nvim_win_get_config(win).title
+  if title[3] then
+    return title[3][1]
+  end
 end
 
 --- @private
 --- Decrement the count of active operations in the headline
 function Display:_decrement_headline_count()
-  local buf = api.nvim_win_get_buf(self.win)
-  local headline = assert(api.nvim_buf_get_lines(buf, 0, 1, false)[1])
+  local headline = get_headline_message(self.win)
+  if not headline then
+    return
+  end
+
   local count_start, count_end = headline:find('%d+')
-  if count_start then
-    assert(count_end)
+  if count_start and count_end then
     local count = assert(tonumber(headline:sub(count_start, count_end)))
-    local updated_headline = string.format(
-      '%s%s%s',
+    local updated_headline = ('%s%s%s'):format(
       headline:sub(1, count_start - 1),
       count - 1,
       headline:sub(count_end + 1)
     )
 
-    set_lines(self.buf, 0, HEADER_LINES - 1, updated_headline)
+    self:set_title(updated_headline)
   end
 end
 
---- Update a task as having passively completed
+--- Update a item as having passively completed
 --- @param name string
 --- @param message string
 --- @param info? string|string[]
 --- @param success? boolean
-function Display:task_done(name, message, info, success)
-  self.items[name] = self.items[name] or {}
+function Display:item_done(name, message, info, success)
   local item = self.items[name]
-
-  if success == true then
-    item.status = 'success'
-    item.expanded = true
-  elseif success == false then
-    item.status = 'failed'
-    item.expanded = true
-  else
-    item.status = 'done'
-    item.expanded = false
-  end
-
+  item.expanded = success ~= nil
   item.message = message
+  item.status = (success == true and 'success') or (success == false and 'failed') or 'done'
   if info then
     item.info = normalize_lines(info)
   end
 
-  render_task(self.buf, name, item)
+  render_item(self.win, item)
   self:_decrement_headline_count()
 end
 
 --- @param f fun(p1: string, p2: string): boolean
-function Display:task_sort(f)
+function Display:item_sort(f)
   local names = vim.tbl_keys(self.items)
   table.sort(names, f)
 
   for i = #names, 1, -1 do
-    local item = assert(self.items[names[i]])
-    render_task(self.buf, names[i], item, nil, true)
+    local item = self.items[names[i]]
+    render_item(self.win, item, nil, true)
   end
 end
 
---- Update the status message of a task in progress
+--- Update the status message of an item in progress
 --- @param name string
 --- @param message string
 --- @param info? string[]
-function Display:task_update(name, message, info)
+function Display:item_update(name, message, info)
   log.fmt_debug('%s: %s', name, message)
-  self.items[name] = self.items[name] or {}
   local item = self.items[name]
   item.message = message
 
@@ -522,33 +504,36 @@ function Display:task_update(name, message, info)
     item.info = info
   end
 
-  render_task(self.buf, name, item)
+  render_item(self.win, item)
 end
 
 --- Update the text of the headline message
---- @param message string
-function Display:update_headline_message(message)
-  --- @type string
-  local headline = TITLE .. ' - ' .. message
-  local width = api.nvim_win_get_width(self.win) - 2
-  local pad_width = math.max(math.floor((width - string.len(headline)) / 2.0), 0)
-  set_lines(self.buf, 0, HEADER_LINES - 1, string.rep(' ', pad_width) .. headline)
+--- @param message? string
+function Display:set_title(message)
+  local title = { { 'pckr.nvim' } }
+  if message then
+    vim.list_extend(title, { { ' — ' }, { message } })
+  end
+  api.nvim_win_set_config(self.win, {
+    title = title,
+    title_pos = 'center',
+  })
 end
 
 --- Display the final results of an operation
 --- @param time number
 function Display:finish(time)
   self.running = false
-  self:update_headline_message(string.format('finished in %.3fs', time))
+  self:set_title(('finished in %.3fs'):format(time))
 
-  for task_name in pairs(self.items) do
-    local plugin = pckr_plugins[task_name]
+  for name in pairs(self.items) do
+    local plugin = pckr_plugins[name]
     if not plugin then
-      log.fmt_warn('%s is not in pckr_plugins', task_name)
+      log.fmt_warn('%s is not in pckr_plugins', name)
     elseif plugin.breaking_commits and #plugin.breaking_commits > 0 then
-      vim.cmd('syntax match pckrBreakingChange "' .. task_name .. '" containedin=pckrStatusSuccess')
+      vim.cmd('syntax match pckrBreakingChange "' .. name .. '" containedin=pckrStatusSuccess')
       for _, commit_hash in ipairs(plugin.breaking_commits) do
-        log.fmt_warn('Potential breaking change in commit %s of %s', commit_hash, task_name)
+        log.fmt_warn('Potential breaking change in commit %s of %s', commit_hash, name)
         vim.cmd('syntax match pckrBreakingChange "' .. commit_hash .. '" containedin=pckrHash')
       end
     end
@@ -590,22 +575,24 @@ local function do_syntax_cmds()
 end
 
 --- Initialize options, settings, and keymaps for display windows
---- @private
+--- @package
 function Display:_setup_win()
-  vim.bo[self.buf].filetype = 'pckr'
-  api.nvim_buf_set_name(self.buf, '[pckr]')
+  local buf = api.nvim_win_get_buf(self.win)
 
-  keymap(self.buf, 'q', 'quit', function()
+  vim.bo[buf].filetype = 'pckr'
+  api.nvim_buf_set_name(buf, '[pckr]')
+
+  keymap(buf, 'q', 'quit', function()
     -- Close a display window and signal that any running operations should terminate
     self.running = false
     vim.fn.execute('q!', 'silent')
   end)
 
-  keymap(self.buf, 'd', 'show the diff', function()
+  keymap(buf, 'd', 'show the diff', function()
     self:diff()
   end)
 
-  keymap(self.buf, { 'za', '<CR>' }, 'show more info', function()
+  keymap(buf, { 'za', '<CR>' }, 'show more info', function()
     self:toggle_info()
   end)
 
@@ -649,28 +636,42 @@ local M = {}
 --- @type fun(headline: string, body: string[]): boolean
 M.ask_user = awrap(3, prompt_user)
 
-local header_sym = '━'
+local display = setmetatable({}, { __index = Display })
 
 --- Open a new display window
 --- @param cbs? Pckr.Display.Callbacks
 --- @return Pckr.Display
 function M.open(cbs)
-  local obj = setmetatable({}, { __index = Display })
-  obj.callbacks = cbs
-  obj.running = true
-  obj.items = {} --- @type table<string,Pckr.Display.Item?>
-  obj.buf, obj.win = open_win()
-  obj:_setup_win()
+  display.running = true
 
-  -- Make header
-  local width = api.nvim_win_get_width(obj.win)
-  local pad_width = math.floor((width - TITLE:len()) / 2.0)
-  set_lines(obj.buf, 0, 1, {
-    (' '):rep(pad_width) .. TITLE,
-    ' ' .. header_sym:rep(width - 2),
+  if not display.win or not api.nvim_win_is_valid(display.win) then
+    _, display.win = open_win()
+    display:_setup_win()
+  end
+  set_lines(display.win, 0, -1, {})
+
+  --- @type table<string,Pckr.Display.Item?>
+  display.items = setmetatable({}, {
+    __index = function(t, k)
+      local buf = api.nvim_win_get_buf(display.win)
+      local row = api.nvim_buf_line_count(buf) - 1
+
+      --- @type Pckr.Display.Item
+      local item = {
+        name = k,
+        expanded = false,
+        mark = api.nvim_buf_set_extmark(buf, ns, row, 0, {}),
+      }
+
+      rawset(t, k, item)
+      return item
+    end,
   })
 
-  return obj
+  display.callbacks = cbs
+  display:set_title()
+
+  return display
 end
 
 return M

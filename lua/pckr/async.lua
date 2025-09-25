@@ -65,10 +65,12 @@ end
 --- @class Pckr.async
 local M = {}
 
+--- @async
+--- @generic T, R
 --- @param argc integer
---- @param func function
---- @param ... any
---- @return any ...
+--- @param func fun(...:T ..., callback: fun(...:R...)): any
+--- @param ... T...
+--- @return R ...
 function M.wait(argc, func, ...)
   -- Always run the wrapped functions in xpcall and re-raise the error in the
   -- coroutine. This makes pcall work as normal.
@@ -96,13 +98,15 @@ function M.wait(argc, func, ...)
 end
 
 --- Creates an async function with a callback style function.
---- @generic F: function
+--- @generic T, R
 --- @param argc integer
---- @param func F
---- @return F
+--- @param func fun(...:T..., callback: fun(...:R...)): any
+--- @return async fun(...:T...): R...
+--- @overload fun(argc: 1, func: fun(callback: fun(...:R...)): any): async fun(): R...
 function M.wrap(argc, func)
   assert(type(argc) == 'number')
   assert(type(func) == 'function')
+  --- @async
   return function(...)
     return M.wait(argc, func, ...)
   end
@@ -183,7 +187,6 @@ end
 
 ---An async function that when called will yield to the Neovim scheduler to be
 ---able to call the API.
---- @type fun()
 M.schedule = M.wrap(1, vim.schedule)
 
 return M

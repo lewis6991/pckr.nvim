@@ -432,7 +432,7 @@ local function install(plugin, disp)
   local function update_task(msg, info)
     if disp then
       vim.schedule(function()
-        disp:task_update(plugin.name, msg, info)
+        disp:item_update(plugin.name, msg, info)
       end)
     end
   end
@@ -488,7 +488,7 @@ local function update(plugin, disp, opts)
   local function update_task(msg, info)
     if disp then
       a.schedule()
-      disp:task_update(plugin.name, msg, info)
+      disp:item_update(plugin.name, msg, info)
     end
   end
 

@@ -34,7 +34,7 @@ local function run_tasks(tasks, disp, kind)
     log.fmt_debug('Running tasks: %s', kind)
   end
   if disp then
-    disp:update_headline_message(fmt('%s %d / %d plugins', kind, #tasks, #tasks))
+    disp:set_title(fmt('%s %d / %d plugins', kind, #tasks, #tasks))
   end
   return a.join(limit, tasks, interrupt_check)
 end
@@ -92,15 +92,15 @@ end
 --- @param disp Pckr.Display
 --- @param commit? string
 local restore_plugin = a.sync(3, function(plugin, disp, commit)
-  disp:task_start(plugin.name, fmt('restoring to %s', commit))
+  disp:item_start(plugin.name, fmt('restoring to %s', commit))
 
   if plugin.type == 'local' then
-    disp:task_done(plugin.name, 'local plugin')
+    disp:item_done(plugin.name, 'local plugin')
     return
   end
 
   if not commit then
-    disp:task_failed(plugin.name, 'could not find plugin in lockfile')
+    disp:item_failed(plugin.name, 'could not find plugin in lockfile')
     return
   end
 
@@ -108,17 +108,17 @@ local restore_plugin = a.sync(3, function(plugin, disp, commit)
 
   local rev = plugin_type.get_rev(plugin)
   if commit == rev then
-    disp:task_done(plugin.name, fmt('already at commit %s', commit))
+    disp:item_done(plugin.name, fmt('already at commit %s', commit))
     return
   end
 
   plugin.err = plugin_type.revert_to(plugin, commit)
   if plugin.err then
-    disp:task_failed(plugin.name, fmt('failed to restore to commit %s', commit))
+    disp:item_failed(plugin.name, fmt('failed to restore to commit %s', commit))
     return
   end
 
-  disp:task_succeeded(plugin.name, fmt('restored to commit %s', commit))
+  disp:item_succeeded(plugin.name, fmt('restored to commit %s', commit))
 end)
 
 --- @class LockInfo
@@ -127,7 +127,7 @@ end)
 --- @async
 function M.restore()
   local disp = display.open()
-  disp:update_headline_message('Restoring from lockfile')
+  disp:set_title('Restoring from lockfile')
 
   local lockfile = config.lockfile.path
   --- @type table<string,LockInfo>

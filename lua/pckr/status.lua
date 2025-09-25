@@ -199,7 +199,7 @@ function M.run()
 
   local disp = display.open()
 
-  disp:update_headline_message(fmt('Total plugins: %d', vim.tbl_count(plugins_by_name)))
+  disp:set_title(fmt('Total plugins: %d', vim.tbl_count(plugins_by_name)))
 
   local total_plugin_time = 0
 
@@ -215,7 +215,7 @@ function M.run()
   local measure_times = require('pckr.util').measure_times
   local pckr_time = measure_times.spec_time + measure_times.load + measure_times.loadplugins
 
-  disp:task_done('pckr.nvim', fmt('(%.2fms)', pckr_time), pckr_info(total_plugin_time))
+  disp:item_done('pckr.nvim', fmt('(%.2fms)', pckr_time), pckr_info(total_plugin_time))
 
   for _, plugin in pairs(plugins_by_name) do
     if plugin.loaded and plugin.total_time then
@@ -230,10 +230,10 @@ function M.run()
       ' '
     )
 
-    disp:task_done(plugin.name, state, get_task_status(plugin))
+    disp:item_done(plugin.name, state, get_task_status(plugin))
   end
 
-  disp:task_sort(function(a, b)
+  disp:item_sort(function(a, b)
     if a == 'pckr.nvim' then
       return true
     elseif b == 'pckr.nvim' then
@@ -255,20 +255,20 @@ function M.run()
         ' '
       )
 
-      disp:task_done(plugin.name, state)
+      disp:item_done(plugin.name, state)
     end)
   end
 
   local config = require('pckr.config')
   local limit = config.max_jobs and config.max_jobs or #tasks
 
-  disp:update_headline_message(fmt('Checking for updates %d / %d plugins', #tasks, #tasks))
+  disp:set_title(fmt('Checking for updates %d / %d plugins', #tasks, #tasks))
 
   async.join(limit, tasks, function()
     return disp:check()
   end)
 
-  disp:update_headline_message(
+  disp:set_title(
     fmt('Total plugins: %d (%.2fms)', vim.tbl_count(plugins_by_name), pckr_time)
   )
 end

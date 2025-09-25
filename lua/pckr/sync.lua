@@ -62,33 +62,43 @@ local function find_extra_plugins(plugins)
 end
 
 --- @async
---- @param tasks (fun(): string, Pckr.Result?)[]
---- @param disp Pckr.Display?
+--- @param task fun(plugin: Pckr.Plugin, disp: Pckr.Display, cb: fun(_:string?, _:string?))
+--- @param plugins string[]
+--- @param disp Pckr.Display
 --- @param kind string
---- @return table<string,Pckr.Result>
-local function run_tasks(tasks, disp, kind)
+--- @return table<string, {err?: string}>
+local function map_task(task, plugins, disp, kind)
+  local tasks = {} --- @type (fun(cb: fun(_:string?, _:string?)))[]
+  for _, v in ipairs(plugins) do
+    local plugin = pckr_plugins[v]
+    if not plugin then
+      log.fmt_error('Unknown plugin: %s', v)
+    else
+      --- @param cb fun(_:string?, _:string?)
+      tasks[#tasks + 1] = function(cb)
+        task(plugin, disp, cb)
+      end
+    end
+  end
+
   if #tasks == 0 then
     log.info('Nothing to do!')
     return {}
-  end
-
-  local function check()
-    if disp then
-      return disp:check()
-    end
   end
 
   local limit = config.max_jobs and config.max_jobs or #tasks
 
   log.fmt_debug('Running tasks: %s', kind)
   if disp then
-    disp:update_headline_message(fmt('%s %d / %d plugins', kind, #tasks, #tasks))
+    disp:set_title(fmt('%s %d / %d plugins', kind, #tasks, #tasks))
   end
 
   --- @type [string?, string?][]
-  local results = async.join(limit, tasks, check)
+  local results = async.join(limit, tasks, function()
+    return disp:check()
+  end)
 
-  local results1 = {} --- @type table<string,Pckr.Result>
+  local results1 = {} --- @type table<string,{err?: string}>
   for _, r in ipairs(results) do
     local name = r[1]
     if name then
@@ -97,31 +107,6 @@ local function run_tasks(tasks, disp, kind)
   end
 
   return results1
-end
-
---- @alias Pckr.Task fun(plugin: Pckr.Plugin, disp: Pckr.Display, cb: fun(_:string?, _:string?))
-
---- @class Pckr.Result
---- @field err? string
-
---- @async
---- @param task Pckr.Task
---- @param plugins string[]
---- @param disp? Pckr.Display
---- @param kind string
---- @return table<string, Pckr.Result>
-local function map_task(task, plugins, disp, kind)
-  local tasks = {} --- @type (fun(function))[]
-  for _, v in ipairs(plugins) do
-    local plugin = pckr_plugins[v]
-    if not plugin then
-      log.fmt_error('Unknown plugin: %s', v)
-    else
-      tasks[#tasks + 1] = async.curry(task, plugin, disp)
-    end
-  end
-
-  return run_tasks(tasks, disp, kind)
 end
 
 --- @async
@@ -144,14 +129,14 @@ local function post_update_hook(plugin, disp)
   local run_task = plugin.run
 
   if type(run_task) == 'function' then
-    disp:task_update(plugin.name, 'running post update hook...')
+    disp:item_update(plugin.name, 'running post update hook...')
     --- @type boolean, string?
     local ok, err = pcall(run_task, plugin, disp)
     if not ok then
       return 'Error running post update hook: ' .. err
     end
   elseif type(run_task) == 'string' then
-    disp:task_update(plugin.name, fmt('running post update hook...("%s")', run_task))
+    disp:item_update(plugin.name, fmt('running post update hook...("%s")', run_task))
     if vim.startswith(run_task, ':') then
       -- Run a vim command
       --- @type boolean, string?
@@ -174,7 +159,7 @@ end
 --- @param disp Pckr.Display
 --- @return string, string?
 local install_task = async.sync(2, function(plugin, disp)
-  disp:task_start(plugin.name, 'installing...')
+  disp:item_start(plugin.name, 'installing...')
 
   local plugin_type = require('pckr.plugin_types')[plugin.type]
 
@@ -191,10 +176,10 @@ local install_task = async.sync(2, function(plugin, disp)
   async.schedule()
 
   if not err then
-    disp:task_succeeded(plugin.name, 'installed')
+    disp:item_succeeded(plugin.name, 'installed')
     log.fmt_debug('Installed %s', plugin.name)
   else
-    disp:task_failed(plugin.name, 'failed to install', err)
+    disp:item_failed(plugin.name, 'failed to install', err)
     log.fmt_debug('Failed to install %s: %s', plugin.name, vim.inspect(err))
   end
 
@@ -203,13 +188,13 @@ end)
 
 --- @param plugin Pckr.Plugin
 --- @param disp Pckr.Display
---- @param __cb? function
 --- @return string?, string?
-local update_task = async.sync(2, function(plugin, disp, __cb)
-  disp:task_start(plugin.name, 'updating...')
+local update_task = async.sync(2, function(plugin, disp)
+  async.schedule()
+  disp:item_start(plugin.name, 'updating...')
 
   if plugin.lock then
-    disp:task_succeeded(plugin.name, 'locked')
+    disp:item_succeeded(plugin.name, 'locked')
     return
   end
 
@@ -220,7 +205,7 @@ local update_task = async.sync(2, function(plugin, disp, __cb)
   async.schedule()
 
   if plugin.err then
-    disp:task_failed(plugin.name, 'failed to update', plugin.err)
+    disp:item_failed(plugin.name, 'failed to update', plugin.err)
     log.fmt_debug('Failed to update %s: %s', plugin.name, plugin.err)
     return plugin.name, plugin.err
   end
@@ -228,7 +213,7 @@ local update_task = async.sync(2, function(plugin, disp, __cb)
   local revs = plugin.revs
 
   if revs[1] == revs[2] then
-    disp:task_done(plugin.name, 'up-to-date')
+    disp:item_done(plugin.name, 'up-to-date')
     return plugin.name
   end
 
@@ -236,7 +221,7 @@ local update_task = async.sync(2, function(plugin, disp, __cb)
   plugin.err = post_update_hook(plugin, disp)
 
   if plugin.err then
-    disp:task_failed(plugin.name, 'failed to run post update hook', plugin.err)
+    disp:item_failed(plugin.name, 'failed to run post update hook', plugin.err)
     log.fmt_debug('Failed to run post update hook %s: %s', plugin.name, plugin.err)
     return plugin.name, plugin.err
   end
@@ -257,7 +242,7 @@ local update_task = async.sync(2, function(plugin, disp, __cb)
     info[#info + 1] = ''
   end
 
-  disp:task_succeeded(plugin.name, fmt('updated: %d new commits', ncommits), info)
+  disp:item_succeeded(plugin.name, fmt('updated: %d new commits', ncommits), info)
 
   return plugin.name
 end)
@@ -291,7 +276,7 @@ local function helptags_stale(dir)
   return txt_newest > tag_oldest
 end
 
---- @param results table<string,Pckr.Result>
+--- @param results table<string,{err?: string}>
 local function update_helptags(results)
   local paths = {} --- @type string[]
   for plugin_name, r in pairs(results) do
@@ -444,6 +429,7 @@ function M.sync(op, plugins)
   async.schedule()
 
   local disp = open_display()
+  async.schedule()
 
   local delta = util.measure(function()
     if do_install and next(to_install) then
@@ -468,7 +454,7 @@ function M.sync(op, plugins)
     end
   end)
 
-  disp:finish(delta)
+  disp:finish(delta / 1000)
 end
 
 return M

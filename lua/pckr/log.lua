@@ -110,7 +110,7 @@ end
 
 local cache_dir = vim.fn.stdpath('cache') --[[@as string]]
 
-local messages = {} --- @type {[1]: string, [1]: string}[]
+local messages = {} --- @type [string, string?][]
 -- local outfile = string.format('%s/pckr.nvim.log', cache_dir)
 vim.fn.mkdir(cache_dir, 'p')
 
@@ -213,7 +213,7 @@ end
 --- @field fmt_warn  fun(fmt: string, ...: any)
 --- @field fmt_error fun(fmt: string, ...: any)
 --- @field fmt_fatal fun(fmt: string, ...: any)
---- @field messages string[]
+--- @field messages [string, string?][]
 local M = {}
 
 for i, x in ipairs(MODES) do
