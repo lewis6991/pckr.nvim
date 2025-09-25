@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.0.0](https://github.com/lewis6991/pckr.nvim/compare/v1.1.2...v2.0.0) (2025-09-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove display config
+* remove support for nvim 0.9
+* remove config.git.cmd and config.git.clone_timeout
+
+### Features
+
+* remove config.git.cmd and config.git.clone_timeout ([6059190](https://github.com/lewis6991/pckr.nvim/commit/6059190417a3e01a3d0882fb4228ba1dc5475591))
+* remove display config ([ea573f5](https://github.com/lewis6991/pckr.nvim/commit/ea573f530032f4865f085afbb283bd6869205b82))
+* remove support for nvim 0.9 ([995d697](https://github.com/lewis6991/pckr.nvim/commit/995d6971ebfcdb93fc3254ffb5c4d998f24c38f0))
+
 ## [1.1.2](https://github.com/lewis6991/pckr.nvim/compare/v1.1.1...v1.1.2) (2025-08-29)
 
 
